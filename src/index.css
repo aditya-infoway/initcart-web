@@ -1,0 +1,84 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap");
+@import "tailwindcss";
+
+body {
+  font-family: "Poppins", sans-serif;
+}
+
+.input-field {
+  @apply w-full border border-gray-300 rounded-lg px-4 py-2 
+  focus:outline-none focus:ring-2 focus:ring-blue-500;
+}
+
+.slick-prev:before, .slick-next:before {
+  color: black !important;
+}
+
+/* Apply only on mobile devices (up to 768px width) */
+@media (max-width: 768px) {
+  body {
+    overflow-x: hidden; /* disables scrolling */
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   HIDE BOTTOM NAVIGATION ON PRODUCT DETAIL PAGE
+   ────────────────────────────────────────────────────────────────────────── */
+body.mpd-page .fixed.bottom-0.left-0.right-0.z-\[100\],
+body.mpd-page .md\:hidden.fixed.bottom-0,
+body.hide-bottom-nav .fixed.bottom-0.left-0.right-0.z-\[100\],
+body.hide-bottom-nav .md\:hidden.fixed.bottom-0 {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Also hide bottom nav on specific product page routes */
+body:has(.mpd-bottom-bar) .fixed.bottom-0.left-0.right-0.z-\[100\] {
+  display: none !important;
+}
+
+@media print {
+
+  body * {
+    visibility: hidden;
+  }
+
+  .invoice-container,
+  .invoice-container * {
+    visibility: visible;
+  }
+  
+  body {
+    width: 1200px;
+  }
+
+  .grid {
+    display: block !important;
+  }
+
+  .invoice-container {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+  
+  .shadow-xl {
+    box-shadow: none !important;
+  }
+
+  .bg-gray-50 {
+    background: white !important;
+  }
+  
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+}
