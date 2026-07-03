@@ -79,6 +79,7 @@ export default function Banner() {
     );
   }
 
+  
   if (banners.length === 0) {
     return (
       <div className="relative aspect-[16/5] overflow-hidden rounded-lg bg-slate-200">
