@@ -881,7 +881,7 @@ const options = {
       return imagePath;
     }
 
-    return `https://api.initcart.in${imagePath}`;
+    return `http://localhost:8000/${imagePath}`;
   };
 
     if (isMobile) {

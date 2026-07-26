@@ -269,7 +269,7 @@ const MobileCartPage = () => {
   const getImageUrl = (imagePath) => {
     if (!imagePath) return "https://placehold.co/100x100/f0f4f8/94a3b8?text=No+Image";
     if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) return imagePath;
-    return `https://api.initcart.in${imagePath}`;
+    return `http://localhost:8000/${imagePath}`;
   };
 
   const formatCouponDiscount = (coupon) => {

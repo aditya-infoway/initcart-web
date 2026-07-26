@@ -25,6 +25,8 @@ import { FaWhatsapp } from 'react-icons/fa';
 import { RiTwitterXLine } from 'react-icons/ri';
 import { publicAxios } from '../../api/axios';
 import logo from '/logo.png';
+import playStoreBadge from "../../../icons/playstore.png";
+import appStoreBadge from "../../../icons/app-store.png";
 
 // ─── Font Tokens ──────────────────────────────────────────────────────────
 const F = {
@@ -41,23 +43,55 @@ const F = {
   emptySubtitle:{ fontSize: 12, fontWeight: 400 },
 };
 
+const emptySiteDocs = {
+  contact_us_pdf_url: "",
+  privacy_policy_pdf_url: "",
+  terms_conditions_pdf_url: "",
+  return_cancellation_pdf_url: "",
+  refund_pdf_url: "",
+};
+
 const MobileAboutUsPage = () => {
   const navigate = useNavigate();
   const [info, setInfo] = useState(null);
+  const [docs, setDocs] = useState(emptySiteDocs);
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
 
   useEffect(() => {
     loadInfo();
+    loadDocuments();
   }, []);
 
   const loadInfo = async () => {
     try {
-      const res = await publicAxios.get('api/banners/init-admin-footer/');
+      const res = await publicAxios.get('api/init-admin-footer/');
       setInfo(res.data);
     } catch (err) {
       console.error('Footer API error:', err);
     }
+  };
+
+  const loadDocuments = async () => {
+    try {
+      const res = await publicAxios.get('api/public-documents/');
+      if (res.data) {
+        setDocs({
+          contact_us_pdf_url: res.data.contact_us_pdf_url || "",
+          privacy_policy_pdf_url: res.data.privacy_policy_pdf_url || "",
+          terms_conditions_pdf_url: res.data.terms_conditions_pdf_url || "",
+          return_cancellation_pdf_url: res.data.return_cancellation_pdf_url || "",
+          refund_pdf_url: res.data.refund_pdf_url || "",
+        });
+      }
+    } catch (err) {
+      console.error('Documents API error:', err);
+    }
+  };
+
+  const openDocument = (url) => {
+    if (!url) return;
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   const handleSubscribe = () => {
@@ -102,13 +136,13 @@ const MobileAboutUsPage = () => {
     { name: "Work Place", path: "/workplacehome" },
   ];
 
-  // Other Links
+  // Other Links -> now mapped to uploaded document PDFs (view-only, opens in new tab, no download)
   const otherLinks = [
-    { name: "Terms & Conditions", path: "/terms" },
-    { name: "Privacy Policy", path: "/privacy" },
-    { name: "Refund Policy", path: "/refund-policy" },
-    { name: "Return Policy", path: "/return-policy" },
-    { name: "Cancellation Policy", path: "/cancellation-policy" },
+    { name: "Contact Us", url: docs.contact_us_pdf_url },
+    { name: "Terms & Conditions", url: docs.terms_conditions_pdf_url },
+    { name: "Privacy Policy", url: docs.privacy_policy_pdf_url },
+    { name: "Refund Policy", url: docs.refund_pdf_url },
+    { name: "Return & Cancellation Policy", url: docs.return_cancellation_pdf_url },
   ];
 
   // Social Media Links
@@ -248,8 +282,10 @@ const MobileAboutUsPage = () => {
             {otherLinks.map((link, idx) => (
               <button
                 key={idx}
-                onClick={() => navigate(link.path)}
-                className="text-left py-2 px-2 rounded-lg hover:bg-gray-50 active:bg-gray-100 transition"
+                type="button"
+                onClick={() => openDocument(link.url)}
+                disabled={!link.url}
+                className="text-left py-2 px-2 rounded-lg hover:bg-gray-50 active:bg-gray-100 transition disabled:opacity-40 disabled:hover:bg-transparent"
               >
                 <p className="text-[11px] text-gray-600 hover:text-blue-600 transition">{link.name}</p>
               </button>
@@ -277,6 +313,46 @@ const MobileAboutUsPage = () => {
             ))}
           </div>
         </div>
+{/* Download Our App */}
+<div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+  <h3 className="text-[14px] font-semibold text-gray-900 mb-1">
+    Download Our App
+  </h3>
+
+  <p className="text-[11px] text-gray-500 mb-5">
+    Shop faster with our mobile application.
+  </p>
+
+  <div className="flex items-center justify-center gap-4">
+
+    <a
+      href="https://play.google.com/store/apps/details?id=com.yourpackage"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="transition-transform hover:scale-105 active:scale-95"
+    >
+      <img
+        src={playStoreBadge}
+        alt="Google Play"
+        className="h-14 w-auto object-contain"
+      />
+    </a>
+
+    <a
+      href="https://apps.apple.com/"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="transition-transform hover:scale-105 active:scale-95"
+    >
+      <img
+        src={appStoreBadge}
+        alt="App Store"
+        className="h-10 w-auto object-contain"
+      />
+    </a>
+
+  </div>
+</div>
 
         {/* Newsletter */}
         <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-5 text-white">

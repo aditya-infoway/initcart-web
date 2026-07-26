@@ -94,7 +94,7 @@ const MobileProductCard = ({ product }) => {
         return "https://placehold.co/300x300/f1f5f9/94a3b8?text=No+Image";
     };
 
-    const ensureAbsolute = (p) => (p?.startsWith("http") ? p : `https://api.initcart.in${p?.startsWith("/") ? "" : "/"}${p}`);
+    const ensureAbsolute = (p) => (p?.startsWith("http") ? p : `http://localhost:8000/${p?.startsWith("/") ? "" : "/"}${p}`);
 
     const currentPrice = product.is_in_campaign && product.campaign_price
         ? product.campaign_price
@@ -162,7 +162,7 @@ const MobileProductListCard = ({ product }) => {
         .catch(() => {});
     }, [product.id]);
 
-    const ensureAbsolute = (p) => (p?.startsWith("http") ? p : `https://api.initcart.in${p?.startsWith("/") ? "" : "/"}${p}`);
+    const ensureAbsolute = (p) => (p?.startsWith("http") ? p : `http://localhost:8000/${p?.startsWith("/") ? "" : "/"}${p}`);
 
     const getImage = () => {
         if (imgErr) return "https://placehold.co/150x150/f1f5f9/94a3b8?text=No+Image";
@@ -300,45 +300,83 @@ export default function MobileVendorStorePage() {
         return () => el.removeEventListener("scroll", onScroll);
     }, []);
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                setLoading(true);
-                const vRes = await publicAxios.get("/ecommerce/public/vendors/");
-                const found = vRes.data.find((v) => v.id === parseInt(id));
-                if (!found) throw new Error("Vendor not found");
+useEffect(() => {
+    const fetchData = async () => {
+        try {
+            setLoading(true);
+            
+            // ✅ Vendors fetch
+            const vRes = await publicAxios.get("/ecommerce/public/vendors/");
+            const vendorsList = Array.isArray(vRes.data) ? vRes.data : vRes.data.results || [];
+            const found = vendorsList.find((v) => v.id === parseInt(id));
+            
+            if (!found) throw new Error("Vendor not found");
 
-                setVendor({
-                    ...found,
-                    store_logo: found.store_logo_url || found.store_logo,
-                });
+            setVendor({
+                ...found,
+                store_logo: found.store_logo_url || found.store_logo,
+            });
 
-                const pRes = await publicAxios.get("/ecommerce/public/products/");
-                setProducts(pRes.data.filter((p) => p.vendor_details?.id === parseInt(id)));
-            } catch (e) {
-                setError("Store not found");
-            } finally {
-                setLoading(false);
+            // ✅ Products fetch with pagination
+            let allProducts = [];
+            let nextPage = "/ecommerce/public/products/";
+            
+            while (nextPage) {
+                const pRes = await publicAxios.get(nextPage);
+                
+                if (Array.isArray(pRes.data)) {
+                    allProducts = [...allProducts, ...pRes.data];
+                    nextPage = null;
+                } else if (pRes.data.results && Array.isArray(pRes.data.results)) {
+                    allProducts = [...allProducts, ...pRes.data.results];
+                    nextPage = pRes.data.next;
+                } else {
+                    nextPage = null;
+                }
             }
-        };
-        if (id) fetchData();
-    }, [id]);
-
-    const getSortedProducts = () => {
-        let list = [...products];
-        if (searchQuery.trim()) {
-            list = list.filter((p) =>
-                p.product_name?.toLowerCase().includes(searchQuery.toLowerCase())
+            
+            // ✅ Filter by vendor
+            const vendorProducts = allProducts.filter(
+                (p) => p.vendor_details?.id === parseInt(id)
             );
-        }
-        switch (sortBy) {
-            case "price_low": return list.sort((a, b) => getP(a) - getP(b));
-            case "price_high": return list.sort((a, b) => getP(b) - getP(a));
-            case "newest": return list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-            case "rating": return list.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-            default: return list;
+            
+            setProducts(vendorProducts);
+            
+        } catch (e) {
+            console.error("Fetch error:", e);
+            setError("Store not found");
+        } finally {
+            setLoading(false);
         }
     };
+    
+    if (id) fetchData();
+}, [id]);
+
+const getSortedProducts = () => {
+    let list = [...products];
+    
+    // Search filter
+    if (searchQuery.trim()) {
+        list = list.filter((p) =>
+            p.product_name?.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    }
+    
+    // Sort
+    switch (sortBy) {
+        case "price_low":
+            return list.sort((a, b) => getP(a) - getP(b));
+        case "price_high":
+            return list.sort((a, b) => getP(b) - getP(a));
+        case "newest":
+            return list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        case "rating":
+            return list.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+        default:
+            return list;
+    }
+};
 
     const getP = (p) => p.campaign_price || p.stocks?.[0]?.final_price || p.stocks?.[0]?.selling_price || 0;
 

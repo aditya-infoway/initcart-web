@@ -164,7 +164,7 @@ const MobileOrderDetailsPage = () => {
     const imagePath = item.product_details?.variant_image || item.product_details?.main_image;
     if (!imagePath) return null;
     if (imagePath.startsWith("http")) return imagePath;
-    return `https://api.initcart.in${imagePath}`;
+    return `http://localhost:8000/${imagePath}`;
   };
 
   const generateInvoice = () => {
@@ -195,7 +195,7 @@ const MobileOrderDetailsPage = () => {
       <body>
         <div class="header">
           <div><h1>INVOICE</h1><p>Order #: ${order.order_number}</p><p>Date: ${formatDate(order.created_at)}</p></div>
-          <div class="company"><h2>InitCart</h2><p>Junagadh, Gujarat</p><p>support@initcart.in</p></div>
+          <div class="company"><h2>InitCart</h2><p>Junagadh, Gujarat</p><p>support@initcart.com</p></div>
         </div>
         <div class="address-row">
           <div class="address-box"><h3>Billing Address</h3><p><strong>${order.billing_name}</strong></p><p>${order.billing_address}</p><p>${order.billing_city}, ${order.billing_state} - ${order.billing_pincode}</p><p>Phone: ${order.billing_phone}</p><p>Email: ${order.billing_email}</p></div>

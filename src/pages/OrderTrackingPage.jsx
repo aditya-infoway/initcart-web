@@ -462,7 +462,7 @@ const OrderTrackingPage = () => {
             </div>
             <div className="flex items-center text-gray-600">
               <FaEnvelope className="mr-3 text-blue-500" />
-              <span>support@initcart.in</span>
+              <span>support@initcart.com</span>
             </div>
           </div>
         </div>

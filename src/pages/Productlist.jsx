@@ -1,5 +1,5 @@
 //Productlist.jsx
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { publicAxios, axiosInstance } from "../api/axios";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -415,7 +415,7 @@ const ProductCard = ({ product, openModal, onAddToCart, showLoginModal, hasCoupo
         if (image.startsWith('http')) {
             return image;
         } else {
-            return `https://api.initcart.in${image.startsWith('/') ? '' : '/'}${image}`;
+            return `http://localhost:8000/${image.startsWith('/') ? '' : '/'}${image}`;
         }
     };
     const getProductImage = (product) => {
@@ -424,7 +424,7 @@ const ProductCard = ({ product, openModal, onAddToCart, showLoginModal, hasCoupo
             if (product.main_image.startsWith('http')) {
                 return product.main_image;
             }
-            return `https://api.initcart.in${product.main_image}`;
+            return `http://localhost:8000/${product.main_image}`;
         }
 
         // Agar main image nahi hai to stocks me variant image check karo
@@ -435,7 +435,7 @@ const ProductCard = ({ product, openModal, onAddToCart, showLoginModal, hasCoupo
                 if (stockWithImage.variant_image.startsWith('http')) {
                     return stockWithImage.variant_image;
                 }
-                return `https://api.initcart.in${stockWithImage.variant_image}`;
+                return `http://localhost:8000/${stockWithImage.variant_image}`;
             }
         }
 
@@ -444,7 +444,7 @@ const ProductCard = ({ product, openModal, onAddToCart, showLoginModal, hasCoupo
             if (product.thumbnail_image.startsWith('http')) {
                 return product.thumbnail_image;
             }
-            return `https://api.initcart.in${product.thumbnail_image}`;
+            return `http://localhost:8000/${product.thumbnail_image}`;
         }
 
         // Kuch nahi mila to placeholder
@@ -859,7 +859,7 @@ const QuickViewModal = ({ modalProduct, onClose, isModalOpen, onAddToCart }) => 
         if (image.startsWith('http')) {
             return image;
         } else {
-            return `https://api.initcart.in${image.startsWith('/') ? '' : '/'}${image}`;
+            return `http://localhost:8000/${image.startsWith('/') ? '' : '/'}${image}`;
         }
     };
 
@@ -1205,6 +1205,12 @@ export default function ProductListPage() {
     const [selectedConditions, setSelectedConditions] = useState([]);
     const [vendorSearch, setVendorSearch] = useState(""); // Vendor business name search
 
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const observerRef = useRef(null);
+    const isFirstRender = useRef(true);
+
     // Coupon related states
     const [showCouponsModal, setShowCouponsModal] = useState(false);
     const [productCoupons, setProductCoupons] = useState({});
@@ -1227,6 +1233,59 @@ export default function ProductListPage() {
             window.removeEventListener('resize', checkMobileView);
         };
     }, []);
+
+    const formatProduct = (product) => {
+        const productName = product.product_name || "Unnamed Product";
+        return {
+            ...product,
+            id: product.id,
+            product_name: productName,
+            main_image: product.main_image,
+            description: product.short_description || product.full_description || "",
+            rating: product.rating || 4,
+            review_count: product.review_count || 0,
+            status: product.status,
+            category: product.category?.id || product.category,
+            subcategory: product.subcategory?.id || product.subcategory,
+            subsubcategory: product.subsubcategory?.id || product.subsubcategory,
+            brand: product.brand,
+            vendor: product.vendor,
+            stocks: product.stocks || [],
+            gallery: product.gallery || [],
+            price: (() => {
+                if (product.stocks && product.stocks.length > 0) {
+                    const stock = product.stocks[0];
+                    return parseFloat(stock.final_price > 0 ? stock.final_price : stock.selling_price) || 0;
+                }
+                return product.price || 0;
+            })(),
+            old_price: (() => {
+                if (product.stocks && product.stocks.length > 0) {
+                    return parseFloat(product.stocks[0].mrp) || 0;
+                }
+                return product.old_price || 0;
+            })(),
+            max_quantity: (() => {
+                if (product.stocks && product.stocks.length > 0) {
+                    return product.stocks[0].maximum_order_quantity || 10;
+                }
+                return 10;
+            })()
+        };
+    };
+
+    const buildQueryParams = (pageNum) => {
+        const params = new URLSearchParams();
+        params.set('page', pageNum);
+        params.set('page_size', 20);
+        if (selectedCategoryIds.length > 0) params.set('category_ids', selectedCategoryIds.join(','));
+        if (selectedBrands.length > 0) params.set('brand_ids', selectedBrands.join(','));
+        if (selectedConditions.length > 0) params.set('conditions', selectedConditions.join(','));
+        if (vendorSearch) params.set('vendor_search', vendorSearch);
+        if (minPrice > 0) params.set('min_price', minPrice);
+        if (maxPrice > 0) params.set('max_price', maxPrice);
+        return params.toString();
+    };
 
     // Add to cart function
     const addToCart = async (productStockId, quantity = 1) => {
@@ -1360,81 +1419,46 @@ export default function ProductListPage() {
         });
     };
 
-    // Fetch products from API
-    const fetchProducts = async () => {
+    const fetchProductsWithFilters = async (pageNum, replace = false) => {
         try {
-            setLoading(true);
+            if (replace) {
+                setLoading(true);
+            } else {
+                setLoadingMore(true);
+            }
             setError(null);
 
-            const response = await publicAxios.get("ecommerce/public/products/");
+            const query = buildQueryParams(pageNum);
+            const response = await publicAxios.get(`ecommerce/public/products/?${query}`);
 
-            if (response.data && Array.isArray(response.data)) {
-                const formattedProducts = response.data.map(product => {
-                    const productName = product.product_name || "Unnamed Product";
+            if (response.data && Array.isArray(response.data.results)) {
+                const formattedProducts = response.data.results.map(formatProduct);
 
-                    // ✅ PRESERVE original product data and ADD formatted fields
-                    return {
-                        // ✅ Keep ALL original fields from API
-                        ...product,  // This includes is_in_campaign, campaign_price, campaign_details!
+                setProducts(prev => replace ? formattedProducts : [...prev, ...formattedProducts]);
+                setHasMore(response.data.next !== null);
+                setPage(pageNum);
 
-                        // ✅ Add/override only what's missing
-                        id: product.id,
-                        product_name: productName,
-                        main_image: product.main_image,
-                        description: product.short_description || product.full_description || "",
-                        rating: product.rating || 4,
-                        review_count: product.review_count || 0,
-                        status: product.status,
-                        category: product.category?.id || product.category,
-                        subcategory: product.subcategory?.id || product.subcategory,
-                        subsubcategory: product.subsubcategory?.id || product.subsubcategory,
-                        brand: product.brand,
-                        vendor: product.vendor,
-                        stocks: product.stocks || [],
-                        gallery: product.gallery || [],
-
-                        // ✅ Calculate price for fallback (but campaign_price will override)
-                        price: (() => {
-                            if (product.stocks && product.stocks.length > 0) {
-                                const stock = product.stocks[0];
-                                return parseFloat(stock.final_price > 0 ? stock.final_price : stock.selling_price) || 0;
-                            }
-                            return product.price || 0;
-                        })(),
-
-                        // ✅ Calculate old price for fallback
-                        old_price: (() => {
-                            if (product.stocks && product.stocks.length > 0) {
-                                return parseFloat(product.stocks[0].mrp) || 0;
-                            }
-                            return product.old_price || 0;
-                        })(),
-
-                        max_quantity: (() => {
-                            if (product.stocks && product.stocks.length > 0) {
-                                return product.stocks[0].maximum_order_quantity || 10;
-                            }
-                            return 10;
-                        })()
-                    };
-                });
-                setProducts(formattedProducts);
-
-                // Fetch coupons for all products
                 setTimeout(() => {
                     fetchCouponsForAllProducts(formattedProducts);
                 }, 500);
-
             } else {
                 throw new Error("Invalid API response format");
             }
         } catch (err) {
             console.error("❌ Error fetching products:", err);
-            setError("Failed to load products. Please try again.");
-            loadSampleProducts();
+            if (replace) {
+                setError("Failed to load products. Please try again.");
+                loadSampleProducts();
+            }
         } finally {
             setLoading(false);
+            setLoadingMore(false);
         }
+    };
+
+    const fetchMoreProducts = () => {
+        if (loadingMore || !hasMore || loading) return;
+        fetchProductsWithFilters(page + 1, false);
     };
 
     // Fetch categories and brands
@@ -1508,51 +1532,8 @@ export default function ProductListPage() {
     /*     const filteredProducts = useMemo(() => {
       return products;
     }, [products]); */
-    const filteredProducts = useMemo(() => {
-        return products.filter((product) => {
-            // Category filter
-            const productCategoryId = Number(product.category_details?.id || product.category);
-            const matchesCategory = selectedCategoryIds.length === 0 ||
-                selectedCategoryIds.map(Number).includes(productCategoryId);
-
-            // Brand filter
-            const productBrandId = Number(product.brand_details?.id || product.brand);
-            const matchesBrand = selectedBrands.length === 0 ||
-                selectedBrands.map(Number).includes(productBrandId);
-
-            // Price filter
-            const productPrice = Number(product.price || product.stocks?.[0]?.final_price || 0);
-            const matchesPrice = (minPrice === 0 && maxPrice === 0) || (
-                productPrice >= Number(minPrice || 0) &&
-                productPrice <= Number(maxPrice || Infinity)
-            );
-
-            // ✅ Product Condition filter
-            const productCondition = product.product_condition || 'New';
-            const matchesCondition = selectedConditions.length === 0 ||
-                selectedConditions.includes(productCondition);
-
-            // ✅ Vendor Business Name search
-            const vendorName = product.vendor_details?.business_name?.toLowerCase() || '';
-            const productName = product.product_name?.toLowerCase() || '';
-            const searchLower = vendorSearch.toLowerCase().trim();
-
-            const matchesVendorSearch = vendorSearch === '' ||
-                vendorName.includes(searchLower) ||
-                productName.includes(searchLower);
-
-            return matchesCategory && matchesBrand && matchesPrice &&
-                matchesCondition && matchesVendorSearch;
-        });
-    }, [
-        products,
-        selectedCategoryIds,
-        selectedBrands,
-        selectedConditions,
-        minPrice,
-        maxPrice,
-        vendorSearch
-    ]);
+    // Filters ab backend API se aate hain, isliye yahan sirf products use karo
+    const filteredProducts = products;
 
     const openModal = (product, e) => {
         e.preventDefault();
@@ -1566,11 +1547,49 @@ export default function ProductListPage() {
         setTimeout(() => setModalProduct(null), TRANSITION_DURATION);
     };
 
-    // Fetch data on component mount
+    // Fetch categories/brands once on mount
     useEffect(() => {
-        fetchProducts();
         fetchFilters();
     }, []);
+
+    // Fetch products on mount + whenever any filter changes (debounced)
+    useEffect(() => {
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+            setPage(1);
+            setHasMore(true);
+            fetchProductsWithFilters(1, true);
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            setPage(1);
+            setHasMore(true);
+            fetchProductsWithFilters(1, true);
+        }, 400); // typing/slider ke liye thoda wait karta hai, taaki har keystroke pe call na jaye
+
+        return () => clearTimeout(timer);
+    }, [selectedCategoryIds, selectedBrands, selectedConditions, vendorSearch, minPrice, maxPrice]);
+
+    // Infinite scroll observer
+    useEffect(() => {
+        if (!observerRef.current || loading) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting && hasMore && !loadingMore) {
+                    fetchMoreProducts();
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        observer.observe(observerRef.current);
+
+        return () => {
+            if (observerRef.current) observer.unobserve(observerRef.current);
+        };
+    }, [hasMore, loadingMore, page, loading]);
 
     useEffect(() => {
         const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -1911,39 +1930,57 @@ export default function ProductListPage() {
                             </div>
                         )}
 
-                        {/* Products Grid */}
-                        {filteredProducts.length === 0 ? (
-                            <div className="text-center py-16 bg-white rounded-xl border-2 border-dashed border-gray-300">
-                                <h3 className="text-xl font-semibold text-gray-800 mb-2">
-                                    No Products Found
-                                </h3>
-                                <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                                    {searchTerm || selectedCategoryIds.length > 0 || selectedBrands.length > 0
-                                        ? "No products match your current filters. Try adjusting your search criteria."
-                                        : "There are no products available at the moment."}
-                                </p>
-                                <button
-                                    onClick={fetchProducts}
-                                    className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition font-medium"
-                                >
-                                    Refresh Products
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-                                {filteredProducts.map((product) => (
-                                    <ProductCard
-                                        key={product.id}
-                                        product={product}
-                                        openModal={openModal}
-                                        onAddToCart={addToCart}
-                                        showLoginModal={() => setShowLoginModal(true)}
-                                        hasCoupons={productCoupons[product.id] && productCoupons[product.id].length > 0}
-                                        onViewCoupons={handleViewCoupons}
-                                    />
-                                ))}
-                            </div>
-                        )}
+{/* Products Grid */}
+{filteredProducts.length === 0 ? (
+    <div className="text-center py-16 bg-white rounded-xl border-2 border-dashed border-gray-300">
+        <h3 className="text-xl font-semibold text-gray-800 mb-2">
+            No Products Found
+        </h3>
+        <p className="text-gray-600 mb-6 max-w-md mx-auto">
+            {searchTerm || selectedCategoryIds.length > 0 || selectedBrands.length > 0
+                ? "No products match your current filters. Try adjusting your search criteria."
+                : "There are no products available at the moment."}
+        </p>
+<button
+    onClick={() => fetchProductsWithFilters(1, true)}
+    className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition font-medium"
+>
+    Refresh Products
+</button>
+    </div>
+) : (
+    <>
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+            {filteredProducts.map((product) => (
+                <ProductCard
+                    key={product.id}
+                    product={product}
+                    openModal={openModal}
+                    onAddToCart={addToCart}
+                    showLoginModal={() => setShowLoginModal(true)}
+                    hasCoupons={productCoupons[product.id] && productCoupons[product.id].length > 0}
+                    onViewCoupons={handleViewCoupons}
+                />
+            ))}
+        </div>
+
+        {/* Infinite Scroll Loader */}
+        <div ref={observerRef} className="w-full py-8 flex justify-center">
+            {loadingMore && (
+                <div className="flex items-center gap-2 text-gray-500">
+                    <svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                    <span className="text-sm">Loading more products...</span>
+                </div>
+            )}
+            {!hasMore && products.length > 0 && (
+                <p className="text-sm text-gray-400">You've seen all products</p>
+            )}
+        </div>
+    </>
+)}
                     </div>
                 </div>
             </div>

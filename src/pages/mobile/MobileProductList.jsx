@@ -407,7 +407,7 @@ const QuickViewModal = ({ product, isOpen, onClose, onAddToCart }) => {
   const disc = old > price ? Math.round(((old - price) / old) * 100) : 0;
 
   const getImg = () => {
-    if (product.main_image) return product.main_image.startsWith("http") ? product.main_image : `https://api.initcart.in${product.main_image}`;
+    if (product.main_image) return product.main_image.startsWith("http") ? product.main_image : `http://localhost:8000/${product.main_image}`;
     return "https://placehold.co/400x400/f0f4f8/94a3b8?text=No+Image";
   };
 
@@ -537,10 +537,10 @@ const ProductCard = ({ product, onQuickView, onAddToCart, onLoginRequired, hasCo
 
   const getImg = () => {
     if (imgError) return "https://placehold.co/300x300/f0f4f8/94a3b8?text=N%2FA";
-    if (product.main_image) return product.main_image.startsWith("http") ? product.main_image : `https://api.initcart.in${product.main_image}`;
+    if (product.main_image) return product.main_image.startsWith("http") ? product.main_image : `http://localhost:8000/${product.main_image}`;
     if (product.stocks?.find(s => s.variant_image)) {
       const vi = product.stocks.find(s => s.variant_image).variant_image;
-      return vi.startsWith("http") ? vi : `https://api.initcart.in${vi}`;
+      return vi.startsWith("http") ? vi : `http://localhost:8000/${vi}`;
     }
     return "https://placehold.co/300x300/f0f4f8/94a3b8?text=No+Image";
   };

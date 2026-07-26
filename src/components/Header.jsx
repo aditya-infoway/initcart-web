@@ -23,7 +23,8 @@ import {
   FiStar,
   FiTrash2,
   FiLoader,
-  FiFilter
+  FiFilter,
+  FiInfo
 } from "react-icons/fi";
 import logo from "/logo.png";
 import { axiosInstance, publicAxios } from "../api/axios";
@@ -56,7 +57,7 @@ const allServices = [
   { id: 11, title: "Work Place", keyword: "coworking,office", path: "/workplacehome", img: workplaceIcon },
 ];
 
-const API_BASE_URL = 'https://api.initcart.in';
+const API_BASE_URL = 'http://localhost:8000/';
 
 const getImageUrl = (imagePath) => {
   if (!imagePath) return null;
@@ -111,6 +112,7 @@ export default function Header() {
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState(false);
   const [showConditionMenu, setShowConditionMenu] = useState(false);
+  const [showLoginMenu, setShowLoginMenu] = useState(false);
   const [vendorSuggestions, setVendorSuggestions] = useState([]);
 
   const handleConditionSearch = (condition) => {
@@ -232,7 +234,7 @@ export default function Header() {
   const getCartImageUrl = (imagePath) => {
     if (!imagePath) return "https://placehold.co/100x100/f0f4f8/94a3b8?text=No+Image";
     if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) return imagePath;
-    return `https://api.initcart.in${imagePath}`;
+    return `http://localhost:8000/${imagePath}`;
   };
 
   // ── Cart hover panel ─────────────────────────────────────────────────────
@@ -370,7 +372,7 @@ export default function Header() {
       setSubCategories(res.data || []);
       if (res.data?.length > 0) { setHoveredSubCategory(res.data[0]); fetchSubSubCategories(res.data[0].id); }
       else { setHoveredSubCategory(null); setChildCategories([]); }
-    } catch {}
+    } catch { }
   };
 
   const fetchSubSubCategories = async (subcategoryId) => {
@@ -378,7 +380,7 @@ export default function Header() {
     try {
       const res = await axios.get(`${API_BASE_URL}/ecommerce/public/subsubcategories/`, { params: { subcategory: subcategoryId } });
       setChildCategories(res.data || []);
-    } catch {}
+    } catch { }
   };
 
   const handleCategoryHover = (category) => {
@@ -723,7 +725,7 @@ export default function Header() {
               <div className="relative group">
                 <button className="inline-flex items-center gap-1 hover:text-blue-200">Condition<FiChevronDown className="group-hover:rotate-180 transition-transform" /></button>
                 <ul className="absolute top-full left-0 mt-2 bg-white text-gray-700 shadow-lg rounded-md w-48 py-2 z-50 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200">
-                  {["new","like new","refurbished","used"].map(c => (
+                  {["new", "like new", "refurbished", "used"].map(c => (
                     <li key={c} className="px-4 py-2 hover:bg-gray-100 cursor-pointer capitalize" onClick={() => handleConditionSearch(c)}>{c.charAt(0).toUpperCase() + c.slice(1)}</li>
                   ))}
                 </ul>
@@ -735,10 +737,10 @@ export default function Header() {
                 <button className="inline-flex items-center gap-1 hover:text-blue-200">Login<FiChevronDown className="group-hover:rotate-180 transition-transform" /></button>
                 <div className="absolute top-full left-0 mt-2 bg-white text-gray-700 shadow-lg rounded-md w-48 py-2 z-50 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200">
                   <button onClick={() => navigate("/customer/login")} className="block w-full text-left px-4 py-2 hover:bg-gray-100">User Login</button>
-                  <button onClick={() => { window.location.href = "https://initcart.in/productvendor/"; }} className="block w-full text-left px-4 py-2 hover:bg-gray-100">Product Vendor Login</button>
-                  <button onClick={() => { window.location.href = "https://initcart.in/servicevendor/"; }} className="block w-full text-left px-4 py-2 hover:bg-gray-100">Service Vendor Login</button>
-                  <button onClick={() => { window.location.href = "https://initcart.in/mlm/"; }} className="block w-full text-left px-4 py-2 hover:bg-gray-100">Agent Login</button>
-                  <button onClick={() => { window.location.href = "https://initcart.in/pos/"; }} className="block w-full text-left px-4 py-2 hover:bg-gray-100">Franchise Login</button>
+                  <button onClick={() => { window.location.href = "https://initcart.com/productvendor/"; }} className="block w-full text-left px-4 py-2 hover:bg-gray-100">Product Vendor Login</button>
+                  <button onClick={() => { window.location.href = "https://initcart.com/servicevendor/"; }} className="block w-full text-left px-4 py-2 hover:bg-gray-100">Service Vendor Login</button>
+                  <button onClick={() => { window.location.href = "https://initcart.com/mlm/"; }} className="block w-full text-left px-4 py-2 hover:bg-gray-100">Agent Login</button>
+                  <button onClick={() => { window.location.href = "https://initcart.com/pos/"; }} className="block w-full text-left px-4 py-2 hover:bg-gray-100">Franchise Login</button>
                 </div>
               </div>
             </nav>
@@ -817,26 +819,48 @@ export default function Header() {
               <span className={`text-xs font-medium text-blue-600 ${activeMobileTab === "vendors" ? "font-bold" : ""}`}>Vendors</span>
             </button>
 
-            {/* Profile */}
-            <button
-              onClick={() => {
-                setShowServicesMenu(false);
-                setMenuOpen(false);
-                handleMobileNavClick("profile", isLoggedIn ? "/customerProfile" : "/customer/login");
-              }}
-              className="flex flex-col items-center justify-center w-1/6 py-1"
-            >
-              <div className={`relative w-12 h-12 rounded-full flex items-center justify-center mb-1 transition-all duration-300 ${activeMobileTab === "profile" ? "bg-gradient-to-br from-blue-100 to-blue-200 ring-2 ring-blue-300 shadow-lg scale-110" : "bg-gray-100"}`}>
-                <FiUser className={`h-6 w-6 ${activeMobileTab === "profile" ? "text-blue-600 scale-125" : "text-blue-600"}`} />
-                {isLoggedIn && (
-                  <span className="absolute -top-1 -right-1 bg-green-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center ring-2 ring-white">
-                    <span className="text-[8px]">✓</span>
-                  </span>
-                )}
-                {activeMobileTab === "profile" && !isLoggedIn && <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 rounded-full animate-ping" />}
-              </div>
-              <span className={`text-xs font-medium text-blue-600 ${activeMobileTab === "profile" ? "font-bold" : ""}`}>Profile</span>
-            </button>
+{/* Profile */}
+<button
+  onClick={() => {
+    setShowServicesMenu(false);
+    setMenuOpen(false);
+    // Directly check localStorage for fresh status
+    const token = localStorage.getItem('customer_token');
+    const userStr = localStorage.getItem('customer_user');
+    if (token && userStr) {
+      navigate("/customerProfile");
+    } else {
+      navigate("/customer/login");
+    }
+    setActiveMobileTab("profile");
+  }}
+  className="flex flex-col items-center justify-center w-1/6 py-1"
+>
+  <div className={`relative w-12 h-12 rounded-full flex items-center justify-center mb-1 transition-all duration-300 ${activeMobileTab === "profile" ? "bg-gradient-to-br from-blue-100 to-blue-200 ring-2 ring-blue-300 shadow-lg scale-110" : "bg-gray-100"}`}>
+    <FiUser className={`h-6 w-6 ${activeMobileTab === "profile" ? "text-blue-600 scale-125" : "text-blue-600"}`} />
+    {(() => {
+      const token = localStorage.getItem('customer_token');
+      const userStr = localStorage.getItem('customer_user');
+      if (token && userStr) {
+        try {
+          const userData = JSON.parse(userStr);
+          return (
+            <span className="absolute -top-1 -right-1 bg-green-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center ring-2 ring-white">
+              <span className="text-[8px]">✓</span>
+            </span>
+          );
+        } catch (e) {
+          return null;
+        }
+      }
+      return null;
+    })()}
+    {activeMobileTab === "profile" && !localStorage.getItem('customer_token') && (
+      <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 rounded-full animate-ping" />
+    )}
+  </div>
+  <span className={`text-xs font-medium text-blue-600 ${activeMobileTab === "profile" ? "font-bold" : ""}`}>Profile</span>
+</button>
 
             {/* ✅ More — closes Services menu before opening More */}
             <button
@@ -913,7 +937,8 @@ export default function Header() {
       ═══════════════════════════════════════════════════════════════════ */}
       {menuOpen && (
         <div className="fixed inset-0 z-[60]" onClick={() => setMenuOpen(false)}>
-          <div className="absolute bottom-0 left-0 right-0 bg-[#1565c0] rounded-t-3xl shadow-2xl h-[75vh] flex flex-col"
+          <div
+            className="absolute bottom-0 left-0 right-0 bg-[#1565c0] rounded-t-3xl shadow-2xl max-h-[75vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}>
             <div className="sticky top-0 bg-[#1565c0] border-b border-blue-600 px-4 py-4 rounded-t-3xl">
               <div className="flex items-center justify-between">
@@ -923,7 +948,7 @@ export default function Header() {
                 </button>
               </div>
             </div>
-            <div className="p-4 pb-28 overflow-y-auto flex-1">
+            <div className="p-4 pb-28 overflow-y-auto">
               {isLoggedIn && userData && (
                 <div className="mb-6 p-4 bg-blue-600 rounded-2xl">
                   <div className="flex items-center gap-3">
@@ -959,7 +984,7 @@ export default function Header() {
                   </button>
                   {showConditionMenu && (
                     <div className="ml-10 mt-1 space-y-1">
-                      {["new","like new","refurbished","used"].map(c => (
+                      {["new", "like new", "refurbished", "used"].map(c => (
                         <button key={c} onClick={() => { handleConditionSearch(c); setMenuOpen(false); }}
                           className="block w-full text-left p-2 rounded-lg hover:bg-blue-600 text-white text-sm capitalize">{c}</button>
                       ))}
@@ -969,6 +994,9 @@ export default function Header() {
 
                 <button onClick={() => { navigate("/Offer"); setMenuOpen(false); }} className="flex items-center gap-3 w-full text-left p-3 rounded-xl hover:bg-blue-600 text-white">
                   <FiTag className="h-5 w-5 text-white" /><span className="font-medium text-white">Offers</span>
+                </button>
+                                <button onClick={() => { navigate("/aboutUs"); setMenuOpen(false); }} className="flex items-center gap-3 w-full text-left p-3 rounded-xl hover:bg-blue-600 text-white">
+                  <FiInfo className="h-5 w-5 text-white" /><span className="font-medium text-white">About us</span>
                 </button>
                 <button onClick={() => { navigate("/brandlist"); setMenuOpen(false); }} className="flex items-center gap-3 w-full text-left p-3 rounded-xl hover:bg-blue-600 text-white">
                   <FiBox className="h-5 w-5 text-white" /><span className="font-medium text-white">Brands</span>
@@ -985,35 +1013,72 @@ export default function Header() {
                   <FiServer className="h-5 w-5 text-white" /><span className="font-medium text-white">Services</span>
                 </button>
 
-                {isLoggedIn ? (
-                  <>
-                    <button onClick={() => { navigate("/customerProfile"); setMenuOpen(false); setActiveMobileTab("profile"); }} className="flex items-center gap-3 w-full text-left p-3 rounded-xl hover:bg-blue-600 text-white">
-                      <FiUser className="h-5 w-5 text-white" /><span className="font-medium text-white">My Dashboard</span>
-                    </button>
-                    <button onClick={() => { navigate("/orders"); setMenuOpen(false); }} className="flex items-center gap-3 w-full text-left p-3 rounded-xl hover:bg-blue-600 text-white">
-                      <FiPackage className="h-5 w-5 text-white" /><span className="font-medium text-white">My Orders</span>
-                    </button>
-                    <button onClick={() => { handleLogout(); setMenuOpen(false); setActiveMobileTab("home"); }} className="flex items-center gap-3 w-full text-left p-3 rounded-xl text-red-300 hover:bg-red-900 hover:text-white">
-                      <FiLogOut className="h-5 w-5" /><span className="font-medium">Logout</span>
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button onClick={() => { navigate("/customer/login"); setMenuOpen(false); setActiveMobileTab("profile"); }} className="flex items-center gap-3 w-full text-left p-3 rounded-xl hover:bg-blue-600 text-white">
-                      <FiUser className="h-5 w-5 text-white" /><span className="font-medium text-white">User Login</span>
-                    </button>
-                    <button onClick={() => { navigate("/customer/registration"); setMenuOpen(false); }} className="flex items-center gap-3 w-full text-left p-3 rounded-xl hover:bg-blue-600 text-white">
-                      <FiUser className="h-5 w-5 text-white" /><span className="font-medium text-white">User Registration</span>
-                    </button>
-                  </>
-                )}
+                
+                  <div className="rounded-xl overflow-hidden">
 
-                <button onClick={() => { navigate("/vendor-registration"); setMenuOpen(false); }} className="flex items-center gap-3 w-full text-left p-3 rounded-xl hover:bg-blue-600 text-white">
-                  <FiUser className="h-5 w-5 text-white" /><span className="font-medium text-white">Become a Vendor</span>
-                </button>
-                <button onClick={() => { window.location.href = "https://initcart.in/product-vendor/"; }} className="flex items-center gap-3 w-full text-left p-3 rounded-xl hover:bg-blue-600 text-white">
-                  <FiUser className="h-5 w-5 text-white" /><span className="font-medium text-white">Vendor Login</span>
-                </button>
+                    <button
+                      onClick={() => setShowLoginMenu(!showLoginMenu)}
+                      className="flex items-center justify-between w-full p-3 rounded-xl hover:bg-blue-600 text-white"
+                    >
+                      <div className="flex items-center gap-3">
+                        <FiUser className="h-5 w-5" />
+                        <span className="font-medium">Login</span>
+                      </div>
+
+                      <FiChevronDown
+                        className={`transition-transform duration-300 ${showLoginMenu ? "rotate-180" : ""
+                          }`}
+                      />
+                    </button>
+
+                    {showLoginMenu && (
+                      <div className="ml-10 mt-1 space-y-1">
+
+                        <button
+                          onClick={() => {
+                            navigate("/customer/login");
+                            setMenuOpen(false);
+                          }}
+                          className="block w-full text-left p-2 rounded-lg hover:bg-blue-600 text-white text-sm"
+                        >
+                          User Login
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            navigate("/customer/registration");
+                            setMenuOpen(false);
+                          }}
+                          className="block w-full text-left p-2 rounded-lg hover:bg-blue-600 text-white text-sm"
+                        >
+                          User Registration
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            window.location.href = "https://initcart.com/product-vendor/";
+                          }}
+                          className="block w-full text-left p-2 rounded-lg hover:bg-blue-600 text-white text-sm"
+                        >
+                          Vendor Login
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            navigate("/vendor-registration");
+                            setMenuOpen(false);
+                          }}
+                          className="block w-full text-left p-2 rounded-lg hover:bg-blue-600 text-white text-sm"
+                        >
+                          Become a Vendor
+                        </button>
+
+                      </div>
+                    )}
+                  </div>
+              
+
+
               </div>
             </div>
           </div>

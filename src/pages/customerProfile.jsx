@@ -563,7 +563,7 @@ const CustomerProfile = () => {
                 {/* ── Go to agent panel ── */}
                 {agent.status === 'approved' && (
                   <button
-                    onClick={() => window.location.href = "https://initcart.in/mlm/"}
+                    onClick={() => window.location.href = "https://initcart.com/mlm/"}
                     className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-2xl font-semibold shadow-lg hover:from-indigo-700 hover:to-blue-700 transition-all">
                     Go to Agent Panel <ChevronRight className="h-4 w-4" />
                   </button>

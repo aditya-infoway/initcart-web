@@ -1,7 +1,7 @@
 // src/service/VendorService.js
 import axios from "axios";
 
-const API_URL = "https://api.initcart.in/api/ecommerce/vendors/";
+const API_URL = "http://localhost:8000//api/ecommerce/vendors/";
 
 export const registerVendor = async (formData) => {
   try {

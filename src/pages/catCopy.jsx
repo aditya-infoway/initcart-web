@@ -299,7 +299,7 @@ const IntegratedCategoryPage = () => {
       return item.icon_url;
     }
     if (item && item.icon && typeof item.icon === 'string') {
-      return `https://api.initcart.in${item.icon}`;
+      return `http://localhost:8000/${item.icon}`;
     }
     return null;
   };

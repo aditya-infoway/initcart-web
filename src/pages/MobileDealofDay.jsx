@@ -10,7 +10,7 @@ const getImageUrl = (image) => {
   if (!image) return "https://placehold.co/400x400/f0f4f8/94a3b8?text=No+Image";
   if (image.startsWith("http")) return image;
   const cleanPath = image.replace(/^\/+/, '');
-  return `https://api.initcart.in/media/${cleanPath}`;
+  return `http://localhost:8000//media/${cleanPath}`;
 };
 
 // ─── Cart helper ────────────────────────────────────────────────────────────

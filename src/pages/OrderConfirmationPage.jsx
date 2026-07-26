@@ -168,7 +168,7 @@ const OrderConfirmationPage = () => {
       return imagePath;
     }
 
-    return `https://api.initcart.in${imagePath}`;
+    return `http://localhost:8000/${imagePath}`;
   };
 
   const downloadInvoice = () => {
@@ -282,7 +282,7 @@ const OrderConfirmationPage = () => {
       <div class="company-details">
         <h2>InitCart Pvt Ltd</h2>
         <p>Junagadh, Gujarat</p>
-        <p>Email: support@initcart.in</p>
+        <p>Email: support@initcart.com</p>
       </div>
     </div>
 

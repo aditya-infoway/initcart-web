@@ -17,7 +17,7 @@ const getImg = (path) => {
   if (!path) return null
   if (path.startsWith('http')) return path
   const clean = path.replace(/^\/+/, '')
-  const base = process.env.REACT_APP_API_URL || 'https://api.initcart.in'
+  const base = process.env.REACT_APP_API_URL || 'http://localhost:8000/'
   return `${base}/${clean.startsWith('media/') ? '' : 'media/'}${clean}`
 }
 
