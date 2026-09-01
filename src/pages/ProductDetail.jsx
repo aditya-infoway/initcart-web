@@ -705,10 +705,10 @@ export default function ProductDetailPage() {
             .catch(() => { });
     }, [product?.id]);
 
-        // ✅ YE EFFECT ADD KARO - Delivery status check
+    // ✅ YE EFFECT ADD KARO - Delivery status check
     useEffect(() => {
         if (!product?.id || !isAuthenticated()) return;
-        
+
         const checkDeliveryStatus = async () => {
             try {
                 const res = await publicAxios.get(`/api/check-product-delivery/${product.id}/`);
@@ -718,7 +718,7 @@ export default function ProductDetailPage() {
                 setIsProductDelivered(false);
             }
         };
-        
+
         checkDeliveryStatus();
     }, [product?.id, isAuthenticated]);
 
@@ -1725,7 +1725,7 @@ export default function ProductDetailPage() {
                                             }`}
                                     >
                                         <ShoppingCart className="h-5 w-5" />
-                                       
+
                                     </button>
 
                                     <button
@@ -1739,7 +1739,7 @@ export default function ProductDetailPage() {
                         )}
 
                         {/* Product Features - 2 Columns, 3 Rows */}
-                        {descriptionFeatures && descriptionFeatures.length > 0 && (
+                        {/* {descriptionFeatures && descriptionFeatures.length > 0 && (
                             <div className="mt-6 pt-6 border-t border-gray-200">
                                 <h3 className="font-semibold text-gray-900 mb-4">Key Features</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1753,7 +1753,7 @@ export default function ProductDetailPage() {
                                     ))}
                                 </div>
                             </div>
-                        )}
+                        )} */}
                     </section>
 
                     {/* Pincode Checker */}
