@@ -107,7 +107,7 @@ const ManualReset = () => {
                 <br/>
                 1. Open the password reset email
                 <br/>
-                2. Look for a link starting with: <code className="text-blue-900">https://initcart.in/reset-password/</code>
+                2. Look for a link starting with: <code className="text-blue-900">https://initcart.com/reset-password/</code>
                 <br/>
                 3. Copy the entire link and paste it above
               </p>

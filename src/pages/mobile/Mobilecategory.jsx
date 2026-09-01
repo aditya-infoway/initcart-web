@@ -22,7 +22,7 @@ const F = {
 const getImgUrl = (path) => {
   if (!path) return null;
   if (path.startsWith('http')) return path;
-  return `https://api.initcart.in${path.startsWith('/') ? '' : '/'}${path}`;
+  return `http://localhost:8000/${path.startsWith('/') ? '' : '/'}${path}`;
 };
 
 const getProductImg = (p) => {

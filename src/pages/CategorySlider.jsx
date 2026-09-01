@@ -312,16 +312,37 @@ export default function CategorySlider() {
   // --- Main Render ---
 
   return (
-    <section className="mt-8 ">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-semibold text-gray-900">FEATURED CATEGORIES</h2>
-        <Link to="/categorylist" className="text-sm text-blue-600 hover:text-blue-700">View all</Link>
+    <section className="mt-8">
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="text-xl font-bold tracking-tight text-gray-900">
+          FEATURED CATEGORIES
+        </h2>
+        <Link
+          to="/categorylist"
+          className="text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors flex items-center gap-1 group"
+        >
+          View all
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            strokeWidth="2"
+            stroke="currentColor"
+            className="w-4 h-4 transition-transform group-hover:translate-x-0.5"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M8.25 4.5l7.5 7.5-7.5 7.5"
+            />
+          </svg>
+        </Link>
       </div>
-      <div className="relative group">
-        <div className="flex overflow-hidden">
+
+      <div className="relative group/slider">
+        <div className="flex overflow-hidden py-2">
           {visible.map((category, index) => {
-            // Use unique key combining id and sliderIndex
-            const uniqueKey = `${category.id}-${category.sliderIndex || index}-${start}`
+            const uniqueKey = `${category.id}-${category.sliderIndex || index}-${start}`;
 
             return (
               <Link
@@ -329,71 +350,80 @@ export default function CategorySlider() {
                 key={uniqueKey}
                 className="flex-shrink-0 w-1/2 md:w-1/3 lg:w-1/4 xl:w-[16.29%] px-2 group flex justify-center"
               >
-                <div
-                  className="w-44 h-64 bg-white flex flex-col border border-blue-400 overflow-hidden shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
-                  style={{ borderRadius: "50% 50% 5% 5%" }}
-                >
-
-                  {/* Image Area */}
-                  <div className="flex-1 flex items-center justify-center">
+                <div className="w-44 h-64 bg-white flex flex-col border border-blue-200 overflow-hidden shadow-sm hover:shadow-xl hover:border-blue-400 transition-all duration-300 hover:-translate-y-1.5 rounded-t-[100px] rounded-b-2xl">
+                  <div className="flex-1 flex items-center justify-center p-0">
                     <img
                       src={category.img}
                       alt={category.title}
-                      className="w-32 h-32 object-contain mix-blend-multiply"
+                      className="object-cover mix-blend-multiply w-full h-full group-hover:scale-110 transition-transform duration-300"
                       onError={(e) => {
-                        e.target.onerror = null
-                        e.target.src = `https://picsum.photos/seed/cat${category.id}/600/400`
+                        e.target.onerror = null;
+                        e.target.src = `https://picsum.photos/seed/cat${category.id}/600/400`;
                       }}
                     />
                   </div>
 
-                  {/* Separator Line */}
-                  {/*<div className="mx-6 border-t border-gray-400"></div> */}
-
-                  {/* Text Section */}
-                  <div className="py-4 text-center bg-blue-100">
-                    <h3 className="text-sm font-semibold text-black capitalize">
+                  <div className="py-3 px-2 text-center bg-gradient-to-b from-blue-50/60 to-blue-100/90 border-t border-blue-100">
+                    <h3 className="text-sm font-bold text-gray-900 capitalize truncate">
                       {category.title}
                     </h3>
-                    <p className="text-xs text-gray-700">
+                    <p className="text-xs font-medium text-gray-500 mt-0.5">
                       {category.product_count} Products
                     </p>
-                  </div> 
-
+                  </div>
                 </div>
               </Link>
-            )
+            );
           })}
         </div>
 
-        {/* Navigation buttons: opacity-0 group-hover:opacity-100 for hover visibility */}
         {categories.length > itemsPerView && (
           <>
             <button
               onClick={prev}
               aria-label="Previous"
-              className="absolute left-0 top-1/2 -translate-y-1/2 rounded-full bg-white p-2 shadow border border-gray-200 hover:bg-gray-50 opacity-0 group-hover:opacity-100 transition duration-300 z-30"
+              className="absolute -left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 backdrop-blur-md p-2.5 shadow-lg border border-gray-100 text-gray-700 hover:bg-blue-600 hover:text-white opacity-0 group-hover/slider:opacity-100 transition-all duration-300 z-30"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" strokeWidth="1.5" stroke="currentColor" className="h-5 w-5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                strokeWidth="2"
+                stroke="currentColor"
+                className="h-5 w-5"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M15.75 19.5L8.25 12l7.5-7.5"
+                />
               </svg>
             </button>
             <button
               onClick={next}
               aria-label="Next"
-              className="absolute right-0 top-1/2 -translate-y-1/2 rounded-full bg-white p-2 shadow border border-gray-200 hover:bg-gray-50 opacity-0 group-hover:opacity-100 transition duration-300 z-30"
+              className="absolute -right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 backdrop-blur-md p-2.5 shadow-lg border border-gray-100 text-gray-700 hover:bg-blue-600 hover:text-white opacity-0 group-hover/slider:opacity-100 transition-all duration-300 z-30"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" strokeWidth="1.5" stroke="currentColor" className="h-5 w-5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                strokeWidth="2"
+                stroke="currentColor"
+                className="h-5 w-5"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M8.25 4.5l7.5 7.5-7.5 7.5"
+                />
               </svg>
             </button>
           </>
         )}
       </div>
 
-      {/* Smooth Modal Implementation */}
       <QuickViewModal />
-
     </section>
   )
 }

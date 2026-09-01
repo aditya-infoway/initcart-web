@@ -65,7 +65,7 @@ const BrandList = () => {
       } else if (err.response?.data) {
         setError(`API Error: ${JSON.stringify(err.response.data)}`);
       } else if (err.request) {
-        setError("Cannot connect to server. Is backend running on https://api.initcart.in?");
+        setError("Cannot connect to server. Is backend running on http://localhost:8000/?");
       } else {
         setError(`Failed to load brands: ${err.message}`);
       }

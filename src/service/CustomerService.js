@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 // API Configuration
-const API_BASE_URL = 'https://api.initcart.in';
+const API_BASE_URL = 'http://localhost:8000/';
 
 // Create axios instance
 const api = axios.create({

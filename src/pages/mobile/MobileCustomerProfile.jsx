@@ -462,7 +462,7 @@ const MobileCustomerProfile = () => {
 
             {/* Agent Panel Button */}
             {agent.status === 'approved' && (
-              <button onClick={() => window.location.href = "https://initcart.in/mlm/"} style={{ width: '100%', padding: '14px', background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDark})`, color: COLORS.white, border: 'none', borderRadius: 14, ...F.cardTitle, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 12 }}>
+              <button onClick={() => window.location.href = "https://initcart.com/mlm/"} style={{ width: '100%', padding: '14px', background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDark})`, color: COLORS.white, border: 'none', borderRadius: 14, ...F.cardTitle, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 12 }}>
                 Go to Agent Panel <ChevronRight size={16} />
               </button>
             )}

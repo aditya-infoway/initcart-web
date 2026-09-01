@@ -65,7 +65,7 @@ const ProductCard = ({ product }) => {
     const getFullImageUrl = (imagePath) => {
         if (!imagePath) return "https://placehold.co/300x300/f0f4f8/94a3b8?text=No+Image";
         if (imagePath.startsWith('http')) return imagePath;
-        return `https://api.initcart.in${imagePath.startsWith('/') ? '' : '/'}${imagePath}`;
+        return `http://localhost:8000/${imagePath.startsWith('/') ? '' : '/'}${imagePath}`;
     };
 
     // Get best product image (variant > main > gallery)
@@ -319,43 +319,60 @@ export default function VendorStorePage() {
         }
     };
 
-    useEffect(() => {
-        const fetchVendorData = async () => {
-            try {
-                setLoading(true);
+useEffect(() => {
+    const fetchVendorData = async () => {
+        try {
+            setLoading(true);
 
-                // Fetch vendor details
-                const vendorsResponse = await publicAxios.get("/ecommerce/public/vendors/");
-                const foundVendor = vendorsResponse.data.find(v => v.id === parseInt(id));
+            // Fetch vendor details
+            const vendorsResponse = await publicAxios.get("/ecommerce/public/vendors/");
+            const foundVendor = vendorsResponse.data.find(v => v.id === parseInt(id));
 
-                if (!foundVendor) {
-                    throw new Error("Vendor not found");
-                }
-
-                setVendor({
-                    ...foundVendor,
-                    store_logo: foundVendor.store_logo_url || foundVendor.store_logo,
-                });
-
-                // Fetch all products (campaign info automatically included via PublicProductSerializer)
-                const productsResponse = await publicAxios.get("/ecommerce/public/products/");
-                const vendorProducts = productsResponse.data.filter(
-                    product => product.vendor_details?.id === parseInt(id)
-                );
-
-                setProducts(vendorProducts);
-            } catch (err) {
-                console.error("Error fetching vendor data:", err);
-                setError("Failed to load vendor store");
-            } finally {
-                setLoading(false);
+            if (!foundVendor) {
+                throw new Error("Vendor not found");
             }
-        };
 
-        if (id) {
-            fetchVendorData();
+            setVendor({
+                ...foundVendor,
+                store_logo: foundVendor.store_logo_url || foundVendor.store_logo,
+            });
+
+            // ✅ Pagination handle karo - saare products fetch karo
+            let allProducts = [];
+            let nextPage = "/ecommerce/public/products/";
+            
+            while (nextPage) {
+                const productsResponse = await publicAxios.get(nextPage);
+                
+                if (Array.isArray(productsResponse.data)) {
+                    allProducts = [...allProducts, ...productsResponse.data];
+                    nextPage = null; // No more pages
+                } else if (productsResponse.data.results) {
+                    allProducts = [...allProducts, ...productsResponse.data.results];
+                    nextPage = productsResponse.data.next; // Next page URL
+                } else {
+                    nextPage = null;
+                }
+            }
+
+            // Filter vendor products
+            const vendorProducts = allProducts.filter(
+                product => product.vendor_details?.id === parseInt(id)
+            );
+
+            setProducts(vendorProducts);
+        } catch (err) {
+            console.error("Error fetching vendor data:", err);
+            setError("Failed to load vendor store");
+        } finally {
+            setLoading(false);
         }
-    }, [id]);
+    };
+
+    if (id) {
+        fetchVendorData();
+    }
+}, [id]);
 
     // Calculate stats
     const totalProducts = products.length;

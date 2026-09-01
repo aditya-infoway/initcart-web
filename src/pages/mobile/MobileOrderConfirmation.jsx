@@ -398,7 +398,7 @@ const MobileOrderConfirmationPage = () => {
   const getImageUrl = (imagePath) => {
     if (!imagePath) return "https://placehold.co/80x80/f0f4f8/94a3b8?text=No+Image";
     if (imagePath.startsWith('http')) return imagePath;
-    return `https://api.initcart.in${imagePath}`;
+    return `http://localhost:8000/${imagePath}`;
   };
 
   const getOrderItemImage = (item) => {
@@ -451,7 +451,7 @@ const MobileOrderConfirmationPage = () => {
       <body>
         <div class="header">
           <div><h1>INVOICE</h1><p>Order #: ${order?.order_number}</p><p>Date: ${new Date(order?.created_at).toLocaleDateString()}</p></div>
-          <div class="company-details"><h2>InitCart</h2><p>Junagadh, Gujarat</p><p>support@initcart.in</p></div>
+          <div class="company-details"><h2>InitCart</h2><p>Junagadh, Gujarat</p><p>support@initcart.com</p></div>
         </div>
         <div class="address-row">
           <div class="address-box"><h3>Billing Address</h3><p>${order?.billing_name}</p><p>${order?.billing_address}</p><p>${order?.billing_city}, ${order?.billing_state} - ${order?.billing_pincode}</p><p>Phone: ${order?.billing_phone}</p></div>

@@ -14,7 +14,7 @@ const calculateDiscount = (oldPrice, newPrice) => {
 const getImageUrl = (image) => {
   if (!image) return "https://placehold.co/400x400/f0f4f8/94a3b8?text=No+Image";
   if (image.startsWith("http")) return image;
-  return `https://api.initcart.in${image.startsWith("/") ? "" : "/"}${image}`;
+  return `http://localhost:8000/${image.startsWith("/") ? "" : "/"}${image}`;
 };
 
 // --- Simple Login Modal Component ---
@@ -147,7 +147,7 @@ const QuickViewModal = ({ modalProduct, onClose, isModalOpen, onAddToCart, showL
   const getImageUrl = (image) => {
     if (!image) return "https://placehold.co/400x400/f0f4f8/94a3b8?text=No+Image";
     if (image.startsWith('http')) return image;
-    return `https://api.initcart.in${image.startsWith('/') ? '' : '/'}${image}`;
+    return `http://localhost:8000/${image.startsWith('/') ? '' : '/'}${image}`;
   };
 
   const backdropClass = `fixed inset-0 z-50 flex items-center justify-center transition-opacity duration-300 ${isModalOpen ? 'opacity-100' : 'opacity-0'} ${isModalOpen ? 'bg-black/40' : 'bg-black/0'} ${isModalOpen ? "pointer-events-auto" : "pointer-events-none"}`;

@@ -374,9 +374,9 @@ const SpaHeader = ({
 
 
   const allImages = [
-    `https://api.initcart.in${serviceData.main_image}`,
-    `https://api.initcart.in${serviceData.second_image}`,
-    ...serviceData.multi_images.map((img) => `https://api.initcart.in${img.image}`),
+    `http://localhost:8000/${serviceData.main_image}`,
+    `http://localhost:8000/${serviceData.second_image}`,
+    ...serviceData.multi_images.map((img) => `http://localhost:8000/${img.image}`),
   ];
 
   return (
@@ -699,9 +699,9 @@ const PhotosTab = ({ serviceData, handleOpenLightbox }) => {
   if (!serviceData) return null;
 
   const allImages = [
-    `https://api.initcart.in${serviceData.main_image}`,
-    `https://api.initcart.in${serviceData.second_image}`,
-    ...serviceData.multi_images.map(img => `https://api.initcart.in${img.image}`),
+    `http://localhost:8000/${serviceData.main_image}`,
+    `http://localhost:8000/${serviceData.second_image}`,
+    ...serviceData.multi_images.map(img => `http://localhost:8000/${img.image}`),
   ];
 
   return (
@@ -1031,9 +1031,9 @@ const Services = () => {
         slides={
           serviceData
             ? [
-              { src: `https://api.initcart.in${serviceData.main_image}` },
-              { src: `https://api.initcart.in${serviceData.second_image}` },
-              ...serviceData.multi_images.map((img) => ({ src: `https://api.initcart.in${img.image}` })),
+              { src: `http://localhost:8000/${serviceData.main_image}` },
+              { src: `http://localhost:8000/${serviceData.second_image}` },
+              ...serviceData.multi_images.map((img) => ({ src: `http://localhost:8000/${img.image}` })),
             ]
             : []
         }

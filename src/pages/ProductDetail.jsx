@@ -319,14 +319,14 @@ export default function ProductDetailPage() {
             if (productData.main_image.startsWith('http')) {
                 return productData.main_image;
             }
-            return `https://api.initcart.in${productData.main_image}`;
+            return `http://localhost:8000/${productData.main_image}`;
         }
 
         if (productData.thumbnail_image) {
             if (productData.thumbnail_image.startsWith('http')) {
                 return productData.thumbnail_image;
             }
-            return `https://api.initcart.in${productData.thumbnail_image}`;
+            return `http://localhost:8000/${productData.thumbnail_image}`;
         }
 
         return null;
@@ -343,7 +343,7 @@ export default function ProductDetailPage() {
             if (productData.thumbnail_image.startsWith('http')) {
                 return productData.thumbnail_image;
             }
-            return `https://api.initcart.in${productData.thumbnail_image}`;
+            return `http://localhost:8000/${productData.thumbnail_image}`;
         }
 
         return null;
@@ -360,7 +360,7 @@ export default function ProductDetailPage() {
                     if (item.startsWith('http')) {
                         return item;
                     }
-                    return `https://api.initcart.in${item}`;
+                    return `http://localhost:8000/${item}`;
                 }
                 if (item.image_url) {
                     return item.image_url;
@@ -371,9 +371,9 @@ export default function ProductDetailPage() {
                     }
                     // Handle product gallery images (stored in products/gallery/)
                     if (item.image.startsWith('/media/products/gallery/') || item.image.startsWith('products/gallery/')) {
-                        return `https://api.initcart.in${item.image.startsWith('/') ? item.image : '/' + item.image}`;
+                        return `http://localhost:8000/${item.image.startsWith('/') ? item.image : '/' + item.image}`;
                     }
-                    return `https://api.initcart.in${item.image.startsWith('/') ? item.image : '/' + item.image}`;
+                    return `http://localhost:8000/${item.image.startsWith('/') ? item.image : '/' + item.image}`;
                 }
                 return null;
             }).filter(Boolean);
@@ -386,9 +386,9 @@ export default function ProductDetailPage() {
                 if (Array.isArray(parsed)) {
                     return parsed.map(img => {
                         if (typeof img === 'string') {
-                            return img.startsWith('http') ? img : `https://api.initcart.in${img}`;
+                            return img.startsWith('http') ? img : `http://localhost:8000/${img}`;
                         }
-                        return img.image_url || (img.image ? `https://api.initcart.in${img.image}` : null);
+                        return img.image_url || (img.image ? `http://localhost:8000/${img.image}` : null);
                     }).filter(Boolean);
                 }
             } catch (e) {
@@ -410,7 +410,7 @@ export default function ProductDetailPage() {
             if (stock.variant_image.startsWith('http')) {
                 return stock.variant_image;
             }
-            return `https://api.initcart.in${stock.variant_image}`;
+            return `http://localhost:8000/${stock.variant_image}`;
         }
 
         return null;
@@ -510,7 +510,7 @@ export default function ProductDetailPage() {
             if (vendorData.store_logo.startsWith('http')) {
                 return vendorData.store_logo;
             }
-            return `https://api.initcart.in${vendorData.store_logo}`;
+            return `http://localhost:8000/${vendorData.store_logo}`;
         }
 
         return null;
@@ -705,10 +705,10 @@ export default function ProductDetailPage() {
             .catch(() => { });
     }, [product?.id]);
 
-        // ✅ YE EFFECT ADD KARO - Delivery status check
+    // ✅ YE EFFECT ADD KARO - Delivery status check
     useEffect(() => {
         if (!product?.id || !isAuthenticated()) return;
-        
+
         const checkDeliveryStatus = async () => {
             try {
                 const res = await publicAxios.get(`/api/check-product-delivery/${product.id}/`);
@@ -718,7 +718,7 @@ export default function ProductDetailPage() {
                 setIsProductDelivered(false);
             }
         };
-        
+
         checkDeliveryStatus();
     }, [product?.id, isAuthenticated]);
 
@@ -1725,7 +1725,7 @@ export default function ProductDetailPage() {
                                             }`}
                                     >
                                         <ShoppingCart className="h-5 w-5" />
-                                       
+
                                     </button>
 
                                     <button
@@ -1739,7 +1739,7 @@ export default function ProductDetailPage() {
                         )}
 
                         {/* Product Features - 2 Columns, 3 Rows */}
-                        {descriptionFeatures && descriptionFeatures.length > 0 && (
+                        {/* {descriptionFeatures && descriptionFeatures.length > 0 && (
                             <div className="mt-6 pt-6 border-t border-gray-200">
                                 <h3 className="font-semibold text-gray-900 mb-4">Key Features</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1753,7 +1753,7 @@ export default function ProductDetailPage() {
                                     ))}
                                 </div>
                             </div>
-                        )}
+                        )} */}
                     </section>
 
                     {/* Pincode Checker */}

@@ -420,7 +420,7 @@ const MobileOrderTrackingPage = () => {
               <div style={{ width: 32, height: 32, background: '#EFF6FF', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <FaEnvelope size={12} color="#2563EB" />
               </div>
-              <span style={{ ...F.cardSub, color: '#1E293B' }}>support@initcart.in</span>
+              <span style={{ ...F.cardSub, color: '#1E293B' }}>support@initcart.com</span>
             </div>
           </div>
         </div>

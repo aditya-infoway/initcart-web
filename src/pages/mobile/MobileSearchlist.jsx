@@ -173,7 +173,7 @@ const MobileProductCard = ({ product, onAddToCart, onViewDetails, hasCoupons, on
     if (!image) return "https://placehold.co/300x300/f0f4f8/94a3b8?text=No+Image";
     if (image.startsWith("http")) return image;
     const cleanPath = image.replace(/^\/+/, "");
-    return `https://api.initcart.in/${cleanPath}`;
+    return `http://localhost:8000//${cleanPath}`;
   };
 
   const getProductPrice = () => {
@@ -607,7 +607,7 @@ const MobileSearchlistPage = () => {
           if (!imgPath) return null;
           if (imgPath.startsWith('http')) return imgPath;
           const cleanPath = imgPath.replace(/^\/+/, '');
-          return `https://api.initcart.in/${cleanPath}`;
+          return `http://localhost:8000//${cleanPath}`;
         };
 
         return {
@@ -648,7 +648,7 @@ const MobileSearchlistPage = () => {
           if (!imgPath) return null;
           if (imgPath.startsWith('http')) return imgPath;
           const cleanPath = imgPath.replace(/^\/+/, '');
-          return `https://api.initcart.in/${cleanPath}`;
+          return `http://localhost:8000//${cleanPath}`;
         };
         return {
           ...p,

@@ -159,7 +159,7 @@ const VendorCard = ({ vendor }) => {
     const getFullImageUrl = (imagePath) => {
         if (!imagePath) return null;
         if (imagePath.startsWith('http')) return imagePath;
-        return `https://api.initcart.in${imagePath.startsWith('/') ? '' : '/'}${imagePath}`;
+        return `http://localhost:8000/${imagePath.startsWith('/') ? '' : '/'}${imagePath}`;
     };
 
     return (

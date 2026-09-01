@@ -113,24 +113,24 @@ const getProductImage = (pd) => {
   if (!pd) return null;
   if (pd.main_image_url) return pd.main_image_url;
   if (pd.thumbnail_image_url) return pd.thumbnail_image_url;
-  if (pd.main_image) return pd.main_image.startsWith('http') ? pd.main_image : `https://api.initcart.in${pd.main_image}`;
-  if (pd.thumbnail_image) return pd.thumbnail_image.startsWith('http') ? pd.thumbnail_image : `https://api.initcart.in${pd.thumbnail_image}`;
+  if (pd.main_image) return pd.main_image.startsWith('http') ? pd.main_image : `http://localhost:8000/${pd.main_image}`;
+  if (pd.thumbnail_image) return pd.thumbnail_image.startsWith('http') ? pd.thumbnail_image : `http://localhost:8000/${pd.thumbnail_image}`;
   return null;
 };
 
 const getVariantImage = (stock) => {
   if (!stock) return null;
   if (stock.variant_image_url) return stock.variant_image_url;
-  if (stock.variant_image) return stock.variant_image.startsWith('http') ? stock.variant_image : `https://api.initcart.in${stock.variant_image}`;
+  if (stock.variant_image) return stock.variant_image.startsWith('http') ? stock.variant_image : `http://localhost:8000/${stock.variant_image}`;
   return null;
 };
 
 const getGalleryImages = (pd) => {
   if (!pd?.gallery || !Array.isArray(pd.gallery)) return [];
   return pd.gallery.map(item => {
-    if (typeof item === 'string') return item.startsWith('http') ? item : `https://api.initcart.in${item}`;
+    if (typeof item === 'string') return item.startsWith('http') ? item : `http://localhost:8000/${item}`;
     if (item.image_url) return item.image_url;
-    if (item.image) return item.image.startsWith('http') ? item.image : `https://api.initcart.in${item.image.startsWith('/') ? item.image : '/' + item.image}`;
+    if (item.image) return item.image.startsWith('http') ? item.image : `http://localhost:8000/${item.image.startsWith('/') ? item.image : '/' + item.image}`;
     return null;
   }).filter(Boolean);
 };
@@ -926,7 +926,7 @@ export default function MobileProductDetail() {
         <div style={{ ...F.sectionLetter, color: C.textMid, marginBottom: 12 }}>Sold By</div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <img
-            src={product.vendor_details?.store_logo_url || `https://api.initcart.in${product.vendor_details?.store_logo}` || 'https://placehold.co/50x50'}
+            src={product.vendor_details?.store_logo_url || `http://localhost:8000/${product.vendor_details?.store_logo}` || 'https://placehold.co/50x50'}
             alt="store"
             style={{ width: 48, height: 48, borderRadius: 24, objectFit: 'cover', border: `2px solid ${C.border}` }}
             onError={e => { e.target.src = 'https://placehold.co/50x50'; }}

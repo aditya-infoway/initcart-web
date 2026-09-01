@@ -134,7 +134,7 @@ export default function CustomerRegistration() {
       setLoading(true);
       setErrors({});
 
-      const response = await fetch("https://api.initcart.in/ecommerce/customer/register/", {
+      const response = await fetch("http://localhost:8000/ecommerce/customer/register/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(registrationData),

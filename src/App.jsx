@@ -84,6 +84,7 @@ import RestaurantDetail from './Services/RestaurantDetail.jsx';
 import HotelHome from './Services/Hotelhomes.jsx';
 import HotelDetail from './Services/Hoteldetail.jsx';
 import HotelHome2 from './Services/Hotelhomes.jsx';
+import QRPublicPage from './pages/QRPublicPage.jsx';
 
 
 function App() {
@@ -156,6 +157,7 @@ function App() {
             <Route path="/searchlist" element={<Searchlist/>}/>
             <Route path="/becomeAgent" element={<BecomeAgent />} /> 
             <Route path="/aboutUs" element={<MobileAboutUsPage/>}/>
+            
 
 
             {/* Protected Routes */}
@@ -189,6 +191,7 @@ function App() {
             <Route path="/customerProfile" element={<CustomerProfilePage/>}/>
 
           </Route>
+          <Route path="/:slug" element={<QRPublicPage />} />
 
           {/* Service pages */}
           <Route element={<ServiceLayout />}>

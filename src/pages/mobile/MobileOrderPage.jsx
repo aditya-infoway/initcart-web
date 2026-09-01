@@ -131,8 +131,8 @@ const MobileOrdersPage = () => {
   }, [authLoading]);
 
   const getOrderItemImage = (item) => {
-    if (item.product_details?.variant_image) return `https://api.initcart.in${item.product_details.variant_image}`;
-    if (item.product_details?.main_image) return `https://api.initcart.in${item.product_details.main_image}`;
+    if (item.product_details?.variant_image) return `http://localhost:8000/${item.product_details.variant_image}`;
+    if (item.product_details?.main_image) return `http://localhost:8000/${item.product_details.main_image}`;
     return "https://placehold.co/80x80/f0f4f8/94a3b8?text=No+Image";
   };
 
