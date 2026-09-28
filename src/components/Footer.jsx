@@ -37,7 +37,7 @@ export default function Footer() {
 
   const loadInfo = async () => {
     try {
-      const res = await publicAxios.get('api/init-admin-footer/')
+      const res = await publicAxios.get('api/banners/init-admin-footer/')
       setInfo(res.data)
     } catch (err) {
       console.error('Footer API error:', err)
@@ -66,16 +66,19 @@ export default function Footer() {
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
-    if (isMobile) {
+  const openApk = () => {
+    if (!info?.apk_file_url) return;
+    window.open(info.apk_file_url, "_blank", "noopener,noreferrer");
+  };
+
+  if (isMobile) {
     return <MobileFooter />;
   }
 
   return (
     <footer className="bg-[#143e56] text-white w-full overflow-hidden">
-      {/* Removed mt-12 to eliminate extra top space */}
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
-        
-        {/* Mobile: 2 columns (grid-cols-2), Desktop: 6 columns */}
+
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 md:gap-8">
 
           {/* --- 1. Company Info --- */}
@@ -86,18 +89,17 @@ export default function Footer() {
             </Link>
             <div className="mt-4 space-y-2 text-white/90 text-sm">
               <div className="flex items-start gap-3">
-                <FiPhone className="mt-0.5 flex-shrink-0" /> 
+                <FiPhone className="mt-0.5 flex-shrink-0" />
                 <span className="break-words">{info?.phone || 'N/A'}</span>
               </div>
               <div className="flex items-start gap-3">
-                <FiMail className="mt-0.5 flex-shrink-0" /> 
+                <FiMail className="mt-0.5 flex-shrink-0" />
                 <span className="break-words">{info?.email || 'N/A'}</span>
               </div>
               <div className="flex items-start gap-3">
                 <FiMapPin className="mt-0.5 flex-shrink-0" />
                 <span className="break-words">{info?.address || 'N/A'}</span>
               </div>
-              
             </div>
           </div>
 
@@ -232,63 +234,66 @@ export default function Footer() {
                 Subscribe
               </button>
             </div>
-              {/*  Brochure Download */}
-{info?.brochure_pdf_url && (
-  <div className="mt-4 pt-4 border-t border-white/10">
-    <a 
-      href={info.brochure_pdf_url}
-      download
-      target="_blank"
-      rel="noopener noreferrer"
-      className="group inline-flex items-center gap-2.5 bg-white/10 hover:bg-white/20 text-white/90 hover:text-white px-4 py-2.5 rounded-lg transition-all duration-300 text-sm font-medium hover:shadow-lg hover:shadow-white/5"
-    >
-      <span className="w-8 h-8 flex items-center justify-center bg-white/20 group-hover:bg-white/30 rounded-lg transition-all duration-300">
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-      </span>
-      <span className="flex flex-col">
-        <span className="leading-tight">Business Brochure</span>
-        <span className="text-[10px] text-white/50 group-hover:text-white/70 leading-tight">Download PDF</span>
-      </span>
-    </a>
-  </div>
-)}
-{/* Download Our App */}
-<div className="mt-6 pt-5 border-t border-white/10">
-  <h4 className="text-sm font-semibold text-white mb-3">
-    Download Our App
-  </h4>
 
-  <div className="flex items-center gap-3">
-    <a
-      href="https://play.google.com/store/apps/details?id=com.yourpackage"
-      target="_blank"
-      rel="noopener noreferrer"
-      className="transition-transform hover:scale-105"
-    >
-      <img
-        src={playStoreBadge}
-        alt="Google Play"
-        className="h-12 w-auto object-contain"
-      />
-    </a>
+            {/* Brochure Download */}
+            {info?.brochure_pdf_url && (
+              <div className="mt-4 pt-4 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => openDocument(info.brochure_pdf_url)}
+                  className="group inline-flex items-center gap-2.5 bg-white/10 hover:bg-white/20 text-white/90 hover:text-white px-4 py-2.5 rounded-lg transition-all duration-300 text-sm font-medium hover:shadow-lg hover:shadow-white/5"
+                >
+                  <span className="w-8 h-8 flex items-center justify-center bg-white/20 group-hover:bg-white/30 rounded-lg transition-all duration-300">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </span>
+                  <span className="flex flex-col items-start">
+                    <span className="leading-tight">Business Brochure</span>
+                    <span className="text-[10px] text-white/50 group-hover:text-white/70 leading-tight">Download PDF</span>
+                  </span>
+                </button>
+              </div>
+            )}
 
-    <a
-      href="https://apps.apple.com/"
-      target="_blank"
-      rel="noopener noreferrer"
-      className="transition-transform hover:scale-105"
-    >
-      <img
-        src={appStoreBadge}
-        alt="App Store"
-        className="h-12 w-auto object-contain"
-      />
-    </a>
-  </div>
-</div>
+            {/* Download Our App */}
+            <div className="mt-6 pt-5 border-t border-white/10">
+              <h4 className="text-sm font-semibold text-white mb-3">
+                Download Our App
+              </h4>
 
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={openApk}
+                  disabled={!info?.apk_file_url}
+                  className={`transition-transform hover:scale-105 bg-transparent p-0 border-0 ${
+                    !info?.apk_file_url ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+                  }`}
+                >
+                  <img
+                    src={playStoreBadge}
+                    alt="Download Android APK"
+                    className="h-12 w-auto object-contain"
+                  />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={openApk}
+                  disabled={!info?.apk_file_url}
+                  className={`transition-transform hover:scale-105 bg-transparent p-0 border-0 ${
+                    !info?.apk_file_url ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+                  }`}
+                >
+                  <img
+                    src={appStoreBadge}
+                    alt="Download App"
+                    className="h-12 w-auto object-contain"
+                  />
+                </button>
+              </div>
+            </div>
 
           </div>
         </div>
@@ -315,7 +320,7 @@ export default function Footer() {
           <div className="text-center">
             <a href="#" className="hover:text-white transition">Support Ticket</a>
           </div>
-          
+
           <div className="text-center">
             © 2025 InitCart. All Rights Reserved.
           </div>

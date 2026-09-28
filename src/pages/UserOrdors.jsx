@@ -59,8 +59,8 @@ const OrdersPage = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [retryCount, setRetryCount] = useState(0);
     const [returnMap, setReturnMap] = useState({}); // key: order_item_id -> return request object
-const [returnModalOpen, setReturnModalOpen] = useState(false);
-const [activeReturnItem, setActiveReturnItem] = useState(null); // { item, order }
+    const [returnModalOpen, setReturnModalOpen] = useState(false);
+    const [activeReturnItem, setActiveReturnItem] = useState(null); // { item, order }
     const handleViewDetails = (productId) => {
         navigate(`/product/${productId}`);
     };
@@ -171,22 +171,22 @@ const [activeReturnItem, setActiveReturnItem] = useState(null); // { item, order
     }, [authLoading, checkAuth, navigate]);
 
     const fetchReturnRequests = useCallback(async () => {
-    try {
-        const res = await axiosInstance.get('/api/ecommerce/public/returns/');
-        if (res.data.success) {
-            const map = {};
-            res.data.data.forEach(rr => {
-                // ek item ke multiple returns ho sakte hain, latest wala rakho
-                if (!map[rr.order_item] || rr.id > map[rr.order_item].id) {
-                    map[rr.order_item] = rr;
-                }
-            });
-            setReturnMap(map);
+        try {
+            const res = await axiosInstance.get('/api/ecommerce/public/returns/');
+            if (res.data.success) {
+                const map = {};
+                res.data.data.forEach(rr => {
+                    // ek item ke multiple returns ho sakte hain, latest wala rakho
+                    if (!map[rr.order_item] || rr.id > map[rr.order_item].id) {
+                        map[rr.order_item] = rr;
+                    }
+                });
+                setReturnMap(map);
+            }
+        } catch (err) {
+            console.error('Error fetching return requests:', err);
         }
-    } catch (err) {
-        console.error('Error fetching return requests:', err);
-    }
-}, []);
+    }, []);
 
     useEffect(() => {
         if (!authLoading) {
@@ -212,33 +212,29 @@ const [activeReturnItem, setActiveReturnItem] = useState(null); // { item, order
         return "https://placehold.co/300x300?text=No+Image";
     };
 const isReturnEligible = (order, item) => {
-    if (order.order_status !== 'delivered' || !order.delivered_at) return false;
-    const daysSince = (Date.now() - new Date(order.delivered_at).getTime()) / 86400000;
+    if (item.item_status !== 'delivered' || !item.delivered_at) return false;
+    const daysSince = (Date.now() - new Date(item.delivered_at).getTime()) / 86400000;
     if (daysSince > 7) return false;
-
-    // ✅ agar iss item ke liye already koi return request hai (kisi bhi status me),
-    //    to naya "Return Item" button kabhi mat dikhao
     if (returnMap[item.id]) return false;
-
     return true;
 };
 
-const handleReturnClick = (order, item) => {
-    setActiveReturnItem({ order, item });
-    setReturnModalOpen(true);
-};
+    const handleReturnClick = (order, item) => {
+        setActiveReturnItem({ order, item });
+        setReturnModalOpen(true);
+    };
 
-const handleRequestAgain = async (returnId) => {
-    try {
-        const res = await axiosInstance.post(`/api/ecommerce/public/returns/${returnId}/request-again/`);
-        if (res.data.success) {
-            toast.success('Sent for review');
-            fetchReturnRequests();
+    const handleRequestAgain = async (returnId) => {
+        try {
+            const res = await axiosInstance.post(`/api/ecommerce/public/returns/${returnId}/request-again/`);
+            if (res.data.success) {
+                toast.success('Sent for review');
+                fetchReturnRequests();
+            }
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to resend request');
         }
-    } catch (err) {
-        toast.error(err.response?.data?.message || 'Failed to resend request');
-    }
-};
+    };
     // Filter orders
     const filteredOrders = orders.filter(order => {
         const matchesSearch =
@@ -286,8 +282,8 @@ const handleRequestAgain = async (returnId) => {
         );
     }
     if (isMobile) {
-  return <MobileOrdersPage />;
-}
+        return <MobileOrdersPage />;
+    }
     return (
         <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
             <Toaster />
@@ -520,6 +516,11 @@ const handleRequestAgain = async (returnId) => {
                                                                         <span className="text-xs bg-gray-100 px-2 py-1 rounded">
                                                                             Qty: {item.quantity}
                                                                         </span>
+
+                                                                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${statusConfig[item.item_status]?.bg} ${statusConfig[item.item_status]?.text}`}>
+                                                                            {statusConfig[item.item_status]?.icon}
+                                                                            {statusConfig[item.item_status]?.label}
+                                                                        </span>
                                                                     </div>
 
                                                                     {/* Action Buttons */}
@@ -531,28 +532,28 @@ const handleRequestAgain = async (returnId) => {
                                                                             Buy Again
                                                                         </button>
                                                                         {isReturnEligible(order, item) && (
-    <button
-        onClick={() => handleReturnClick(order, item)}
-        className="px-3 py-1.5 border border-red-300 text-red-600 hover:bg-red-50 rounded-lg text-xs font-medium transition"
-    >
-        Return Item
-    </button>
-)}
+                                                                            <button
+                                                                                onClick={() => handleReturnClick(order, item)}
+                                                                                className="px-3 py-1.5 border border-red-300 text-red-600 hover:bg-red-50 rounded-lg text-xs font-medium transition"
+                                                                            >
+                                                                                Return Item
+                                                                            </button>
+                                                                        )}
 
-{returnMap[item.id] && (
-    <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 ml-2">
-        Return: {returnMap[item.id].status.replace('_', ' ')}
-    </span>
-)}
+                                                                        {returnMap[item.id] && (
+                                                                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 ml-2">
+                                                                                Return: {returnMap[item.id].status.replace('_', ' ')}
+                                                                            </span>
+                                                                        )}
 
-{returnMap[item.id]?.status === 'vendor_rejected' && (
-    <button
-        onClick={() => handleRequestAgain(returnMap[item.id].id)}
-        className="px-3 py-1.5 bg-orange-50 text-orange-700 hover:bg-orange-100 rounded-lg text-xs font-medium transition ml-2"
-    >
-        Request Again
-    </button>
-)}
+                                                                        {returnMap[item.id]?.status === 'vendor_rejected' && (
+                                                                            <button
+                                                                                onClick={() => handleRequestAgain(returnMap[item.id].id)}
+                                                                                className="px-3 py-1.5 bg-orange-50 text-orange-700 hover:bg-orange-100 rounded-lg text-xs font-medium transition ml-2"
+                                                                            >
+                                                                                Request Again
+                                                                            </button>
+                                                                        )}
                                                                     </div>
                                                                 </div>
 
@@ -632,7 +633,7 @@ const handleRequestAgain = async (returnId) => {
                                     >
                                         Next
                                         <HiOutlineArrowRight className="h-4 w-4" />
-                                   </button>
+                                    </button>
                                 </div>
                             </div>
                         )}

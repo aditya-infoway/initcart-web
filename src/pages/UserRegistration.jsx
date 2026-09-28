@@ -145,7 +145,7 @@ export default function CustomerRegistration() {
       if (response.ok && data.success) {
         // ── Clear referral code after successful registration ──
         localStorage.removeItem("referral_code");
-        alert("🎉 Registration Successful! Welcome to our community!");
+        alert(" Registration Successful! Welcome to our community!");
         setTimeout(() => navigate("/customer/login"), 1500);
       } else {
         if (data.errors) setErrors(data.errors);
