@@ -177,7 +177,7 @@ const fetchCategories = async () => {
   if (loading) {
     return (
       <div className="w-full bg-gray-50 py-10">
-        <div className="max-w-7xl mx-auto px-4">
+        <div className=" mx-auto px-4">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6">
             <div className="mb-4 md:mb-0">
               <h2 className="text-xl font-bold text-gray-800">CATEGORIES</h2>
@@ -204,7 +204,7 @@ const fetchCategories = async () => {
 
   return (
     <div className="w-full bg-gray-50 py-10">
-      <div className="max-w-7xl mx-auto px-4">
+      <div className="mx-auto px-4">
         {/* Title + Search */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6">
           <div className="mb-4 md:mb-0">

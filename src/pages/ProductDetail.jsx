@@ -2150,10 +2150,10 @@ export default function ProductDetailPage() {
                 </div>
             </div>
 
-            {/* Related Products Slider */}
-            <div className="mt-12">
-                <RelatedProductSlider />
-            </div>
+{/* Related Products Slider */}
+<div className="mt-12">
+    <RelatedProductSlider product={product} />
+</div>
         </div>
     );
 }

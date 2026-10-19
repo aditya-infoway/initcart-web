@@ -4,12 +4,38 @@ import { publicAxios, axiosInstance } from "../api/axios";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
-import { Filter, ShoppingCart, Eye, Tag, ChevronRight, Zap } from "lucide-react";
+import { Filter, Eye, Tag, ChevronRight, Zap, ShoppingCart } from "lucide-react";
 import MobileProductListPage from "./mobile/MobileProductList";
 
 const MIN_PRICE = 0;
 const MAX_PRICE = 200000;
 const TRANSITION_DURATION = 300;
+const PLACEHOLDER_IMG = "https://placehold.co/600x600/f0f4f8/94a3b8?text=No+Image";
+
+// ---------------------------------------------------------------------------
+// IMAGE HELPERS
+// ---------------------------------------------------------------------------
+const toAbsoluteUrl = (path) => {
+    if (!path) return null;
+    if (path.startsWith("http")) return path;
+    return `http://localhost:8000${path.startsWith("/") ? "" : "/"}${path}`;
+};
+
+// main image -> variant image -> thumbnail -> placeholder
+const getProductImage = (product) => {
+    if (product.main_image) return toAbsoluteUrl(product.main_image);
+
+    if (product.stocks && product.stocks.length > 0) {
+        const stockWithImage = product.stocks.find((s) => s.variant_image || s.variant_image_url);
+        if (stockWithImage) {
+            return toAbsoluteUrl(stockWithImage.variant_image_url || stockWithImage.variant_image);
+        }
+    }
+
+    if (product.thumbnail_image) return toAbsoluteUrl(product.thumbnail_image);
+
+    return PLACEHOLDER_IMG;
+};
 
 const StarRating = ({ rating }) => (
     <span className="text-yellow-500 flex items-center">
@@ -189,9 +215,6 @@ const CouponsModal = ({ product, coupons, onClose, onApplyCoupon }) => {
                                                     >
                                                         Apply Coupon
                                                     </button>
-                                                    {/* <p className="text-xs text-gray-500 mt-2 text-center lg:text-right">
-                                                                Click to copy & apply
-                                                            </p> */}
                                                 </div>
                                             </div>
                                             <div className={`bg-gradient-to-r ${getCouponColor(coupon.coupon_type)} w-29 text-white text-sm font-bold px-3 py-2 mb-4 rounded-full`}>
@@ -231,8 +254,6 @@ const CouponsModal = ({ product, coupons, onClose, onApplyCoupon }) => {
                                                 </div>
                                             )}
                                         </div>
-
-
                                     </div>
                                 </div>
                             ))}
@@ -265,16 +286,24 @@ const CouponsModal = ({ product, coupons, onClose, onApplyCoupon }) => {
     );
 };
 
-const ProductCard = ({ product, openModal, onAddToCart, showLoginModal, hasCoupons, onViewCoupons }) => {
+// Campaign badge config (Flash / Deal of the Day / Featured)
+const CAMPAIGN_BADGES = {
+    Flash: { label: "FLASH", cls: "from-orange-500 to-orange-600", icon: true },
+    "Deal of the Day": { label: "DEAL OF THE DAY", cls: "from-purple-500 to-purple-600" },
+    Featured: { label: "FEATURED", cls: "from-blue-500 to-blue-600" },
+};
+
+// ---------------------------------------------------------------------------
+// PRODUCT CARD  (whole card is clickable -> product detail)
+// ---------------------------------------------------------------------------
+const ProductCard = ({ product, openModal, hasCoupons, onViewCoupons, onAddToCart }) => {
     const navigate = useNavigate();
-    const { isAuthenticated } = useAuth();
-    const { addToast } = useToast();
+    const [adding, setAdding] = useState(false);
 
-    // 👇 Add countdown state
     const [countdown, setCountdown] = useState(null);
-
     const [reviewStats, setReviewStats] = useState({ avg: 0, count: 0 });
 
+    // Reviews
     useEffect(() => {
         publicAxios.get("/api/all-review/", { params: { model: "product", object_id: product.id } })
             .then(res => {
@@ -285,34 +314,38 @@ const ProductCard = ({ product, openModal, onAddToCart, showLoginModal, hasCoupo
             })
             .catch(() => { });
     }, [product.id]);
-    // 👇 Add countdown effect for ALL campaign types
+
+    // Countdown for ALL campaign types
     useEffect(() => {
-        if (!product?.is_in_campaign || !product?.campaign_details?.end_datetime) {
+        const end = product?.campaign_details?.end_datetime;
+        if (!product?.is_in_campaign || !end) {
+            setCountdown(null);
             return;
         }
 
-        const timer = setInterval(() => {
-            const endTime = new Date(product.campaign_details.end_datetime).getTime();
-            const now = new Date().getTime();
-            const distance = endTime - now;
-
-            if (distance <= 0) {
+        const calc = () => {
+            const distance = new Date(end).getTime() - Date.now();
+            if (isNaN(distance) || distance <= 0) {
                 setCountdown(null);
-                clearInterval(timer);
-                return;
+                return false;
             }
+            setCountdown({
+                days: Math.floor(distance / (1000 * 60 * 60 * 24)),
+                hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+                minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
+            });
+            return true;
+        };
 
-            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-
-            setCountdown({ days, hours, minutes });
-        }, 500); // Update every minute
+        if (!calc()) return;
+        const timer = setInterval(() => {
+            if (!calc()) clearInterval(timer);
+        }, 30000);
 
         return () => clearInterval(timer);
     }, [product]);
 
-    // product Price with campaign support
+    // Price with campaign support
     const getProductPrice = () => {
         if (product.is_in_campaign && product.campaign_price) {
             return product.campaign_price;
@@ -336,283 +369,182 @@ const ProductCard = ({ product, openModal, onAddToCart, showLoginModal, hasCoupo
 
     const getDiscountPercentage = () => {
         if (product.is_in_campaign && product.campaign_details?.discount_percentage) {
-            return product.campaign_details.discount_percentage;
+            return Math.round(product.campaign_details.discount_percentage);
         }
-        const currentPrice = getProductPrice();
-        const oldPrice = getOldPrice();
+        const currentPrice = parseFloat(getProductPrice());
+        const oldPrice = parseFloat(getOldPrice());
         if (oldPrice > currentPrice) {
             return Math.round(((oldPrice - currentPrice) / oldPrice) * 100);
         }
         return 0;
     };
 
-    const getMaxOrderQuantity = () => {
-        if (product.stocks && product.stocks.length > 0) {
-            return product.stocks[0].maximum_order_quantity || 10;
-        }
-        return 10;
-    };
-
-    const currentPrice = getProductPrice();
-    const oldPrice = getOldPrice();
+    const currentPrice = parseFloat(getProductPrice()) || 0;
+    const oldPrice = parseFloat(getOldPrice()) || 0;
     const discount = getDiscountPercentage();
-    const maxQuantity = getMaxOrderQuantity();
+    const campaignBadge = product.is_in_campaign
+        ? CAMPAIGN_BADGES[product.campaign_details?.campaign_type]
+        : null;
+    const condition = product.product_condition;
 
-    // ✅ NEW: Show countdown for Deal of the Day
-    const getCountdownDisplay = () => {
-        if (!product.is_in_campaign || !countdown) return null;
-
-        return (
-            <div className={`mt-3 flex items-center justify-between bg-gradient-to-r from-blue-600 to-blue-600 text-white px-5 py-2 rounded-full shadow-md w-full`}>
-                <div className="flex items-center gap-2">
-                    <span className="text-xs text-white/80">Ends in</span>
-                    <div className="flex items-center gap-1 font-bold">
-                        <span className="bg-white/20 px-1.5 py-0.5 rounded text-xs">{countdown.hours}h</span>
-                        <span className="bg-white/20 px-1.5 py-0.5 rounded text-xs">{countdown.minutes}m</span>
-                    </div>
-                </div>
-            </div>
-        );
-    };
-
-    // Campaign badge (keep as is)
-    const getCampaignBadge = () => {
-        if (!product.is_in_campaign) return null;
-
-        const campaignType = product.campaign_details?.campaign_type;
-        switch (campaignType) {
-            case 'Flash':
-                return (
-                    <div className="absolute top-2 left-2 z-10">
-                        <div className="bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold px-2 py-1 rounded-md shadow-lg flex items-center gap-1">
-                            <Zap className="h-3 w-3" /> FLASH
-                        </div>
-                    </div>
-                );
-            case 'Deal of the Day':
-                return (
-                    <div className="absolute top-2 left-2 z-10">
-                        <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white text-xs font-bold px-2 py-1 rounded-md shadow-lg">
-                            DEAL OF THE DAY
-                        </div>
-                    </div>
-                );
-            case 'Featured':
-                return (
-                    <div className="absolute top-2 left-2 z-10">
-                        <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-bold px-2 py-1 rounded-md shadow-lg">
-                            FEATURED
-                        </div>
-                    </div>
-                );
-            default:
-                return null;
-        }
-    };
-
-    const getImageUrl = (image) => {
-        if (!image) return "https://placehold.co/300x300/f0f4f8/94a3b8?text=No+Image";
-        if (image.startsWith('http')) {
-            return image;
-        } else {
-            return `http://localhost:8000/${image.startsWith('/') ? '' : '/'}${image}`;
-        }
-    };
-    const getProductImage = (product) => {
-        // Pehle main image check karo
-        if (product.main_image) {
-            if (product.main_image.startsWith('http')) {
-                return product.main_image;
-            }
-            return `http://localhost:8000/${product.main_image}`;
-        }
-
-        // Agar main image nahi hai to stocks me variant image check karo
-        if (product.stocks && product.stocks.length > 0) {
-            // Pehla stock lo jisme variant image ho
-            const stockWithImage = product.stocks.find(stock => stock.variant_image);
-            if (stockWithImage && stockWithImage.variant_image) {
-                if (stockWithImage.variant_image.startsWith('http')) {
-                    return stockWithImage.variant_image;
-                }
-                return `http://localhost:8000/${stockWithImage.variant_image}`;
-            }
-        }
-
-        // Thumbnail image check karo
-        if (product.thumbnail_image) {
-            if (product.thumbnail_image.startsWith('http')) {
-                return product.thumbnail_image;
-            }
-            return `http://localhost:8000/${product.thumbnail_image}`;
-        }
-
-        // Kuch nahi mila to placeholder
-        return "https://placehold.co/300x300/f0f4f8/94a3b8?text=No+Image";
-    };
-
-    const handleViewDetails = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        navigate(`/product/${product.id}`);
-    };
-
-    const handleAddToCartClick = async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        if (!isAuthenticated()) {
-            sessionStorage.setItem('pendingCartProduct', JSON.stringify({
-                productStockId: product.stocks && product.stocks.length > 0 ? product.stocks[0].id : null,
-                quantity: 1
-            }));
-            sessionStorage.setItem('redirectAfterLogin', window.location.pathname);
-            showLoginModal();
-            return;
-        }
-
-        try {
-            const productStockId = product.stocks && product.stocks.length > 0
-                ? product.stocks[0].id
-                : null;
-
-            if (!productStockId) {
-                addToast('Product stock not available', 'error');
-                return;
-            }
-
-            await onAddToCart(productStockId, 1);
-        } catch (error) {
-            console.error('❌ Add to cart error:', error);
-        }
-    };
-
-    const isMobileView = window.innerWidth < 768;
+    const goToDetail = () => navigate(`/product/${product.id}`);
 
     return (
-        <div className="bg-white p-4 rounded-xl shadow-md border border-gray-200 hover:shadow-xl transition-all duration-300 group cursor-pointer h-full flex flex-col relative">
-            {/* Campaign Badge */}
-            {getCampaignBadge()}
-
-            {/* Amazon Style Coupon Ribbon */}
+        <div
+            role="link"
+            tabIndex={0}
+            onClick={goToDetail}
+            onKeyDown={(e) => {
+                if (e.key === "Enter") goToDetail();
+            }}
+            className="group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-[0_2px_10px_rgba(0,0,0,0.08)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(0,0,0,0.16)] focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+            {/* Special offers ribbon */}
             {hasCoupons && (
-                <div className="absolute top-0 left-0 right-0">
-                    <div className="bg-gradient-to-r from-blue-600 via-blue-400 to-blue-500 text-white text-[10px] sm:text-xs font-bold py-1 px-3 rounded-t-xl text-center shadow-md">
-                        <div className="flex items-center justify-center gap-1.5">
-                            <Tag className="h-3 w-3" />
-                            <span className="truncate">SPECIAL OFFERS AVAILABLE</span>
-                            <Zap className="h-3 w-3" />
-                        </div>
+                <div className="bg-gradient-to-r from-blue-600 via-blue-400 to-blue-500 px-3 py-1 text-center text-[10px] font-bold text-white shadow-md sm:text-xs">
+                    <div className="flex items-center justify-center gap-1.5">
+                        <Tag className="h-3 w-3" />
+                        <span className="truncate">SPECIAL OFFERS AVAILABLE</span>
+                        <Zap className="h-3 w-3" />
                     </div>
                 </div>
             )}
 
-            {/* Discount Badge - Show only if not in campaign */}
-            {!product.is_in_campaign && discount > 0 && (
-                <div className="absolute top-8 left-2 z-10">
-                    <div className="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-md shadow-lg">
-                        {discount}% OFF
-                    </div>
+            {/* Image area */}
+            <div className="relative p-2.5 pb-2">
+                <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-white">
+                    <img
+                        src={getProductImage(product)}
+                        alt={product.product_name}
+                        loading="lazy"
+                        className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-105"
+                        onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = "https://placehold.co/600x600/f0f4f8/94a3b8?text=Image+Error";
+                        }}
+                    />
                 </div>
-            )}
 
-            {/* Quick View Button */}
-            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition duration-300 z-20">
+                {/* Top-left badges: campaign + discount */}
+                <div className="absolute left-4 top-4 z-10 flex flex-col items-start gap-1">
+                    {campaignBadge && (
+                        <span
+                            className={`flex items-center gap-1 rounded bg-gradient-to-r ${campaignBadge.cls} px-1.5 py-0.5 text-[10px] font-bold text-white shadow`}
+                        >
+                            {campaignBadge.icon && <Zap className="h-3 w-3" />}
+                            {campaignBadge.label}
+                        </span>
+                    )}
+                    {discount > 0 && (
+                        <span className="rounded bg-blue-600 px-1.5 py-0.5 text-[11px] font-bold text-white shadow">
+                            -{discount}%
+                        </span>
+                    )}
+                </div>
+
+                {/* Top-right: product condition */}
+                {condition && (
+                    <span className="absolute right-4 top-4 z-10 rounded bg-yellow-400 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-gray-900 shadow">
+                        {condition}
+                    </span>
+                )}
+
+                {/* Quick view */}
                 <button
+                    type="button"
                     onClick={(e) => openModal(product, e)}
-                    className="p-2 rounded-full bg-white/90 text-blue-600 shadow-lg hover:bg-white hover:shadow-xl transition transform hover:scale-110"
                     aria-label="Quick View"
+                    className="absolute bottom-4 right-4 z-20 rounded-full bg-white/95 p-2 text-blue-600 opacity-0 shadow-lg transition duration-300 hover:scale-110 hover:bg-white group-hover:opacity-100"
                 >
                     <Eye className="h-4 w-4" />
                 </button>
             </div>
 
-            {/* Product Image */}
-            <div className={`h-48 flex items-center justify-center mb-3 overflow-hidden rounded-lg bg-gray-50 ${hasCoupons ? 'mt-8' : product.is_in_campaign ? 'mt-8' : 'mt-0'}`}>
-                <img
-                    src={getProductImage(product)}
-                    alt={product.product_name}
-                    className="object-contain max-h-full max-w-full p-2 group-hover:scale-105 transition-transform duration-300"
-                    onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = "https://placehold.co/300x300/f0f4f8/94a3b8?text=Image+Error"
-                    }}
-                />
-            </div>
-
-            {/* Product Details */}
-            <div className="flex-1 flex flex-col">
-                <h4 className="text-sm font-medium text-gray-800 line-clamp-2 mb-2 group-hover:text-blue-600 transition min-h-[2.5rem]">
+            {/* Details */}
+            <div className="flex flex-1 flex-col border-t border-gray-100 px-3.5 py-3">
+                <h4 className="mb-1.5 line-clamp-2 min-h-[2.5rem] text-[13px] font-medium leading-snug text-gray-800 transition group-hover:text-blue-600">
                     {product.product_name}
                 </h4>
 
+                {/* Rating */}
+                <div className="mb-2 flex items-center text-xs text-gray-500">
+                    <StarRating rating={Math.round(reviewStats.avg) || 0} />
+                    <span className="ml-1">({reviewStats.count})</span>
+                </div>
+
                 <div className="mt-auto">
-                    {/* Price Section */}
-                    <div className="flex items-baseline gap-2 mb-2">
-                        <p className="text-xl font-bold text-gray-900">₹{parseFloat(currentPrice).toFixed(2)}</p>
+                    {/* Price */}
+                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                        <span className="text-lg font-bold text-blue-600">₹{currentPrice.toFixed(2)}</span>
                         {oldPrice > currentPrice && (
-                            <p className="text-sm text-gray-400 line-through">₹{parseFloat(oldPrice).toFixed(2)}</p>
+                            <span className="text-xs text-gray-400 line-through">₹{oldPrice.toFixed(2)}</span>
+                        )}
+                        {discount > 0 && (
+                            <span className="text-xs font-semibold text-green-600">{discount}% off</span>
                         )}
                     </div>
 
-                    {/* 👇 **UPDATED: Universal countdown for ALL campaigns** */}
-                    {getCountdownDisplay()}
-
-                    {/* Rating & Stock */}
-                    <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
-                        <div className="flex items-center">
-                            <StarRating rating={Math.round(reviewStats.avg) || 0} />
-                            <span className="ml-1">({reviewStats.count})</span>
-                        </div>
-                    </div>
-
-                    {/* Coupon Offer Button */}
-                    {hasCoupons && (
-                        <div className="mb-3 p-2 bg-gradient-to-r from-blue-50 to-blue-50 border border-blue-200 rounded-lg">
-                            <button
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    onViewCoupons(product);
-                                }}
-                                className="w-full text-left flex items-center justify-between group"
-                            >
-                                <div className="flex items-center gap-2">
-                                    <div className="bg-gradient-to-r from-blue-500 to-blue-500 p-1 rounded">
-                                        <Tag className="h-3 w-3 text-white" />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-semibold text-gray-800">Special Offers Available</p>
-                                        <p className="text-[10px] text-gray-600">View all coupons</p>
-                                    </div>
-                                </div>
-                                <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-blue-500 transition" />
-                            </button>
+                    {/* Countdown (all campaigns) */}
+                    {countdown && (
+                        <div className="mt-2 flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-blue-500 px-3 py-1.5 text-white shadow-sm">
+                            <span className="text-[11px] text-white/80">Ends in</span>
+                            <div className="flex items-center gap-1 text-[11px] font-bold">
+                                {countdown.days > 0 && (
+                                    <span className="rounded bg-white/20 px-1.5 py-0.5">{countdown.days}d</span>
+                                )}
+                                <span className="rounded bg-white/20 px-1.5 py-0.5">{countdown.hours}h</span>
+                                <span className="rounded bg-white/20 px-1.5 py-0.5">{countdown.minutes}m</span>
+                            </div>
                         </div>
                     )}
 
-
-                    {/* Action Buttons */}
-                    <div className="flex gap-2">
+                    {/* Coupon offers */}
+                    {hasCoupons && (
                         <button
-                            onClick={handleAddToCartClick}
-                            className={`flex-1 py-2.5 rounded-lg font-medium transition ${isMobileView ? 'text-sm' : 'text-sm'
-                                } ${hasCoupons || product.is_in_campaign
-                                    ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white hover:from-blue-700 hover:to-blue-700'
-                                    : 'bg-blue-600 text-white hover:bg-blue-700'
-                                }`}
+                            type="button"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                onViewCoupons(product);
+                            }}
+                            className="group/coupon mt-2.5 flex w-full items-center justify-between rounded-lg border border-blue-200 bg-blue-50 p-2 text-left"
                         >
-                            {isMobileView ? <ShoppingCart className="h-4 w-4 mx-auto" /> : <ShoppingCart className="h-4 w-4 mx-auto" />}
+                            <div className="flex items-center gap-2">
+                                <div className="rounded bg-blue-500 p-1">
+                                    <Tag className="h-3 w-3 text-white" />
+                                </div>
+                                <div>
+                                    <p className="text-xs font-semibold text-gray-800">Special Offers Available</p>
+                                    <p className="text-[10px] text-gray-600">View all coupons</p>
+                                </div>
+                            </div>
+                            <ChevronRight className="h-4 w-4 text-gray-400 transition group-hover/coupon:text-blue-500" />
                         </button>
+                    )}
 
-                        <button
-                            onClick={handleViewDetails}
-                            className={`flex-1 py-2.5 rounded-lg font-medium transition ${isMobileView ? 'text-sm' : 'text-sm'
-                                } bg-gray-100 text-gray-700 hover:bg-gray-200`}
-                        >
-                            {isMobileView ? <Eye className="h-4 w-4 mx-auto" /> : <Eye className="h-4 w-4 mx-auto" />}
-                        </button>
-                    </div>
+                    {/* Add to cart (click does NOT open detail page) */}
+                    <button
+                        type="button"
+                        disabled={adding || !product.stocks?.[0]?.id}
+                        onClick={async (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const stockId = product.stocks?.[0]?.id;
+                            if (!stockId) return;
+                            try {
+                                setAdding(true);
+                                await onAddToCart(stockId, 1);
+                            } catch (err) {
+                                /* error toast already shown */
+                            } finally {
+                                setAdding(false);
+                            }
+                        }}
+                        className="mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-blue-600 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        <ShoppingCart className="h-4 w-4" />
+                        {adding ? "Adding..." : "Add to cart"}
+                    </button>
                 </div>
             </div>
         </div>
@@ -755,18 +687,18 @@ const PriceRangeFilter = ({ minPrice, maxPrice, setMinPrice, setMaxPrice }) => {
                 input[type=range]::-webkit-slider-thumb {
                     -webkit-appearance: none;
                     appearance: none;
-                    width: 16px; 
+                    width: 16px;
                     height: 16px;
                     border-radius: 50%;
                     background: transparent;
                     cursor: pointer;
-                    margin-top: -7px; 
+                    margin-top: -7px;
                     pointer-events: all;
                     box-shadow: none;
                 }
-                
+
                 input[type=range]::-moz-range-thumb {
-                    width: 16px; 
+                    width: 16px;
                     height: 16px;
                     border-radius: 50%;
                     background: transparent;
@@ -775,23 +707,24 @@ const PriceRangeFilter = ({ minPrice, maxPrice, setMinPrice, setMaxPrice }) => {
                     box-shadow: none;
                     border: none;
                 }
-                
+
                 input[type=range]:hover::-webkit-slider-thumb {
-                    background: rgba(37, 99, 235, 0.1); 
+                    background: rgba(37, 99, 235, 0.1);
                 }
             `}</style>
         </div>
     );
 };
 
+// ---------------------------------------------------------------------------
+// QUICK VIEW MODAL  (Add to cart lives here now)
+// ---------------------------------------------------------------------------
 const QuickViewModal = ({ modalProduct, onClose, isModalOpen, onAddToCart }) => {
     const navigate = useNavigate();
-    const { isAuthenticated } = useAuth();
     const { addToast } = useToast();
+    const [quantity, setQuantity] = useState(1);
 
     if (!modalProduct) return null;
-
-    const [quantity, setQuantity] = useState(1);
 
     const getProductPrice = () => {
         if (modalProduct.stocks && modalProduct.stocks.length > 0) {
@@ -853,16 +786,6 @@ const QuickViewModal = ({ modalProduct, onClose, isModalOpen, onAddToCart }) => 
         }
     };
 
-    const getImageUrl = (image) => {
-        if (!image) return "https://placehold.co/400x400/f0f4f8/94a3b8?text=No+Image";
-
-        if (image.startsWith('http')) {
-            return image;
-        } else {
-            return `http://localhost:8000/${image.startsWith('/') ? '' : '/'}${image}`;
-        }
-    };
-
     const backdropClass = `fixed inset-0 z-50 flex items-center justify-center transition-opacity duration-300 ${isModalOpen ? 'opacity-100' : 'opacity-0'} ${isModalOpen ? 'bg-black/40' : 'bg-black/0'} ${isModalOpen ? "pointer-events-auto" : "pointer-events-none"}`;
     const modalContentClass = `w-11/12 max-w-2xl rounded-lg bg-white p-6 shadow-2xl transition-all duration-300 transform ${isModalOpen ? 'scale-100 translate-y-0' : 'scale-90 translate-y-4'}`;
 
@@ -876,7 +799,7 @@ const QuickViewModal = ({ modalProduct, onClose, isModalOpen, onAddToCart }) => 
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-xl font-bold text-gray-900">Quick View: {modalProduct.product_name}</h3>
+                    <h3 className="text-xl font-bold text-gray-900 truncate pr-4">Quick View: {modalProduct.product_name}</h3>
                     <button
                         onClick={onClose}
                         className="p-1 rounded-full text-gray-400 hover:text-gray-700 transition"
@@ -891,9 +814,9 @@ const QuickViewModal = ({ modalProduct, onClose, isModalOpen, onAddToCart }) => 
                 <div className="flex gap-6">
                     <div className="w-1/2 flex flex-col items-center">
                         <img
-                            src={getImageUrl(modalProduct.main_image)}
+                            src={getProductImage(modalProduct)}
                             alt={modalProduct.product_name}
-                            className="w-full h-56 object-contain rounded-lg border border-gray-200"
+                            className="w-full aspect-square object-contain rounded-lg border border-gray-200 bg-white"
                             onError={(e) => {
                                 e.target.onerror = null;
                                 e.target.src = "https://placehold.co/400x400/f0f4f8/94a3b8?text=Image+Error"
@@ -953,19 +876,19 @@ const QuickViewModal = ({ modalProduct, onClose, isModalOpen, onAddToCart }) => 
                             Total Price: <strong>₹{(price * quantity).toFixed(2)}</strong>
                         </p>
 
-                        <div className="flex gap-4 mt-6">
+                        <div className="flex gap-3 mt-6">
                             <button
                                 onClick={handleAddToCartClick}
                                 className="flex-1 rounded-lg bg-blue-600 py-2.5 text-white font-semibold hover:bg-blue-700 transition shadow-lg shadow-blue-200 text-sm"
                             >
-                                <ShoppingCart className="h-4 w-4 mx-auto" />
+                                Add to Cart
                             </button>
 
                             <button
                                 onClick={handleViewDetails}
-                                className="flex-1 rounded-lg bg-gray-200 py-2.5 text-gray-700 font-semibold transition shadow-lg shadow-gray-200 text-sm"
+                                className="flex-1 rounded-lg bg-gray-200 py-2.5 text-gray-700 font-semibold hover:bg-gray-300 transition text-sm"
                             >
-                                <Eye className="h-4 w-4 mx-auto" />
+                                View Details
                             </button>
                         </div>
                     </div>
@@ -1040,10 +963,10 @@ const MobileFilterSidebar = ({
     brands,
     selectedBrands,
     setSelectedBrands,
-    selectedConditions,        // ✅ Add this prop
-    setSelectedConditions,     // ✅ Add this prop
-    vendorSearch,              // ✅ Add this prop
-    setVendorSearch,           // ✅ Add this prop
+    selectedConditions,
+    setSelectedConditions,
+    vendorSearch,
+    setVendorSearch,
     onApplyFilters
 }) => {
     return (
@@ -1287,11 +1210,16 @@ export default function ProductListPage() {
         return params.toString();
     };
 
-    // Add to cart function
+    // Add to cart function (used by Quick View modal)
     const addToCart = async (productStockId, quantity = 1) => {
         try {
             if (!isAuthenticated()) {
                 addToast('Please login to add items to cart', 'warning');
+                sessionStorage.setItem('pendingCartProduct', JSON.stringify({
+                    productStockId,
+                    quantity
+                }));
+                sessionStorage.setItem('redirectAfterLogin', window.location.pathname);
                 setShowLoginModal(true);
                 return;
             }
@@ -1529,9 +1457,6 @@ export default function ProductListPage() {
         setProducts(sampleProducts);
     };
 
-    /*     const filteredProducts = useMemo(() => {
-      return products;
-    }, [products]); */
     // Filters ab backend API se aate hain, isliye yahan sirf products use karo
     const filteredProducts = products;
 
@@ -1619,12 +1544,15 @@ export default function ProductListPage() {
                         </aside>
 
                         <div className="md:col-span-3 lg:col-span-4">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
                                 {[...Array(8)].map((_, i) => (
-                                    <div key={i} className="bg-white p-4 rounded-xl shadow-md border border-gray-200 animate-pulse h-full flex flex-col">
-                                        <div className="h-48 bg-gray-200 rounded mb-3"></div>
-                                        <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                                        <div className="h-3 bg-gray-200 rounded w-1/2 mt-auto"></div>
+                                    <div key={i} className="bg-white rounded-xl shadow-md border border-gray-100 animate-pulse h-full flex flex-col overflow-hidden">
+                                        <div className="aspect-square bg-gray-200 m-2.5 rounded-lg"></div>
+                                        <div className="p-3.5 border-t border-gray-100">
+                                            <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                                            <div className="h-4 bg-gray-200 rounded w-1/2 mb-3"></div>
+                                            <div className="h-5 bg-gray-200 rounded w-1/3"></div>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -1680,7 +1608,6 @@ export default function ProductListPage() {
                 />
             )}
 
-            {/* Mobile Filter Sidebar */}
             {/* Mobile Filter Sidebar */}
             <MobileFilterSidebar
                 isOpen={showMobileFilters}
@@ -1930,57 +1857,56 @@ export default function ProductListPage() {
                             </div>
                         )}
 
-{/* Products Grid */}
-{filteredProducts.length === 0 ? (
-    <div className="text-center py-16 bg-white rounded-xl border-2 border-dashed border-gray-300">
-        <h3 className="text-xl font-semibold text-gray-800 mb-2">
-            No Products Found
-        </h3>
-        <p className="text-gray-600 mb-6 max-w-md mx-auto">
-            {searchTerm || selectedCategoryIds.length > 0 || selectedBrands.length > 0
-                ? "No products match your current filters. Try adjusting your search criteria."
-                : "There are no products available at the moment."}
-        </p>
-<button
-    onClick={() => fetchProductsWithFilters(1, true)}
-    className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition font-medium"
->
-    Refresh Products
-</button>
-    </div>
-) : (
-    <>
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-            {filteredProducts.map((product) => (
-                <ProductCard
-                    key={product.id}
-                    product={product}
-                    openModal={openModal}
-                    onAddToCart={addToCart}
-                    showLoginModal={() => setShowLoginModal(true)}
-                    hasCoupons={productCoupons[product.id] && productCoupons[product.id].length > 0}
-                    onViewCoupons={handleViewCoupons}
-                />
-            ))}
-        </div>
+                        {/* Products Grid */}
+                        {filteredProducts.length === 0 ? (
+                            <div className="text-center py-16 bg-white rounded-xl border-2 border-dashed border-gray-300">
+                                <h3 className="text-xl font-semibold text-gray-800 mb-2">
+                                    No Products Found
+                                </h3>
+                                <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                                    {searchTerm || selectedCategoryIds.length > 0 || selectedBrands.length > 0
+                                        ? "No products match your current filters. Try adjusting your search criteria."
+                                        : "There are no products available at the moment."}
+                                </p>
+                                <button
+                                    onClick={() => fetchProductsWithFilters(1, true)}
+                                    className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition font-medium"
+                                >
+                                    Refresh Products
+                                </button>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                                    {filteredProducts.map((product) => (
+                                        <ProductCard
+                                            key={product.id}
+                                            product={product}
+                                            openModal={openModal}
+                                            hasCoupons={productCoupons[product.id] && productCoupons[product.id].length > 0}
+                                            onViewCoupons={handleViewCoupons}
+                                            onAddToCart={addToCart}
+                                        />
+                                    ))}
+                                </div>
 
-        {/* Infinite Scroll Loader */}
-        <div ref={observerRef} className="w-full py-8 flex justify-center">
-            {loadingMore && (
-                <div className="flex items-center gap-2 text-gray-500">
-                    <svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                    </svg>
-                    <span className="text-sm">Loading more products...</span>
-                </div>
-            )}
-            {!hasMore && products.length > 0 && (
-                <p className="text-sm text-gray-400">You've seen all products</p>
-            )}
-        </div>
-    </>
-)}
+                                {/* Infinite Scroll Loader */}
+                                <div ref={observerRef} className="w-full py-8 flex justify-center">
+                                    {loadingMore && (
+                                        <div className="flex items-center gap-2 text-gray-500">
+                                            <svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                            </svg>
+                                            <span className="text-sm">Loading more products...</span>
+                                        </div>
+                                    )}
+                                    {!hasMore && products.length > 0 && (
+                                        <p className="text-sm text-gray-400">You've seen all products</p>
+                                    )}
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>

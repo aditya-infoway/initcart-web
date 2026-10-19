@@ -28,6 +28,39 @@ const T = {
 
 const MIN_PRICE = 0;
 const MAX_PRICE = 200000;
+const PAGE_SIZE = 20;
+const PLACEHOLDER_IMG = "https://placehold.co/600x600/f0f4f8/94a3b8?text=No+Image";
+
+// ─── Image helpers (website ke same) ──────────────────────────────────────────
+const toAbsoluteUrl = (path) => {
+  if (!path) return null;
+  if (path.startsWith("http")) return path;
+  return `http://localhost:8000${path.startsWith("/") ? "" : "/"}${path}`;
+};
+
+// main image -> variant image -> thumbnail -> placeholder
+const getProductImage = (product) => {
+  if (product.main_image) return toAbsoluteUrl(product.main_image);
+
+  if (product.stocks && product.stocks.length > 0) {
+    const stockWithImage = product.stocks.find((s) => s.variant_image || s.variant_image_url);
+    if (stockWithImage) {
+      return toAbsoluteUrl(stockWithImage.variant_image_url || stockWithImage.variant_image);
+    }
+  }
+
+  if (product.thumbnail_image) return toAbsoluteUrl(product.thumbnail_image);
+
+  return PLACEHOLDER_IMG;
+};
+
+// Campaign ho to campaign ka asli (original) price, warna stock ka MRP
+const getOldPriceOf = (product) => {
+  if (product.is_in_campaign && product.campaign_details?.original_price) {
+    return parseFloat(product.campaign_details.original_price) || 0;
+  }
+  return parseFloat(product.stocks?.[0]?.mrp || product.old_price || 0) || 0;
+};
 
 // ─── Star Rating ──────────────────────────────────────────────────────────────
 const StarRating = ({ rating }) => (
@@ -274,7 +307,8 @@ const FilterSheet = ({
                     <input
                       type="number"
                       value={minPrice}
-                      onChange={e => setMinPrice(Math.min(Number(e.target.value), maxPrice))}
+                      // maxPrice 0 matlab "limit nahi" — tab min ko 0 pe mat roko
+                      onChange={e => setMinPrice(maxPrice > 0 ? Math.min(Number(e.target.value), maxPrice) : Number(e.target.value))}
                       className="w-full border border-gray-200 rounded-xl py-2.5 pl-7 pr-3 bg-gray-50"
                       style={T.searchInput}
                     />
@@ -400,16 +434,10 @@ const QuickViewModal = ({ product, isOpen, onClose, onAddToCart }) => {
     }
     return product.price || 0;
   };
-  const getOld = () => product.stocks?.[0]?.mrp || product.old_price || 0;
   const maxQty = product.stocks?.[0]?.maximum_order_quantity || 10;
-  const price = parseFloat(getPrice());
-  const old = parseFloat(getOld());
+  const price = parseFloat(getPrice()) || 0;
+  const old = getOldPriceOf(product);
   const disc = old > price ? Math.round(((old - price) / old) * 100) : 0;
-
-  const getImg = () => {
-    if (product.main_image) return product.main_image.startsWith("http") ? product.main_image : `http://localhost:8000/${product.main_image}`;
-    return "https://placehold.co/400x400/f0f4f8/94a3b8?text=No+Image";
-  };
 
   const handleAdd = async () => {
     const stockId = product.stocks?.[0]?.id;
@@ -428,8 +456,8 @@ const QuickViewModal = ({ product, isOpen, onClose, onAddToCart }) => {
         <div className="px-4 pb-6">
           <div className="flex gap-4">
             <div className="w-28 h-28 bg-gray-50 rounded-2xl flex items-center justify-center overflow-hidden shrink-0 border border-gray-100">
-              <img src={getImg()} alt={product.product_name} className="object-contain w-full h-full p-2"
-                onError={e => { e.target.src = "https://placehold.co/200/f0f4f8/94a3b8?text=N/A"; }} />
+              <img src={getProductImage(product)} alt={product.product_name} className="object-contain w-full h-full p-2"
+                onError={e => { e.target.onerror = null; e.target.src = "https://placehold.co/200/f0f4f8/94a3b8?text=N/A"; }} />
             </div>
             <div className="flex-1 min-w-0">
               <p style={T.cardTitle} className="text-gray-900 line-clamp-2">{product.product_name}</p>
@@ -484,16 +512,22 @@ const QuickViewModal = ({ product, isOpen, onClose, onAddToCart }) => {
   );
 };
 
-// ─── Product Card ─────────────────────────────────────────────────────────────
+// ─── Product Card (website ProductCard jaisa design, mobile ke fonts/sizes ke saath) ─────
+const CAMPAIGN_BADGES = {
+  Flash: { label: "FLASH", cls: "from-orange-500 to-orange-600", icon: true },
+  "Deal of the Day": { label: "DEAL OF THE DAY", cls: "from-purple-500 to-purple-600" },
+  Featured: { label: "FEATURED", cls: "from-blue-500 to-blue-600" },
+};
+
 const ProductCard = ({ product, onQuickView, onAddToCart, onLoginRequired, hasCoupons, onViewCoupons }) => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const [countdown, setCountdown] = useState(null);
   const [imgError, setImgError] = useState(false);
-
+  const [adding, setAdding] = useState(false);
   const [reviewStats, setReviewStats] = useState({ avg: 0, count: 0 });
 
-  // ✅ YE useEffect ADD KARO - Rating fetch karne ke liye
+  // Rating fetch
   useEffect(() => {
     publicAxios.get("/api/all-review/", {
       params: { model: "product", object_id: product.id }
@@ -507,18 +541,22 @@ const ProductCard = ({ product, onQuickView, onAddToCart, onLoginRequired, hasCo
       .catch(() => { });
   }, [product.id]);
 
+  // Countdown (days + hours + minutes) — saare campaign types ke liye
   useEffect(() => {
-    if (!product?.is_in_campaign || !product?.campaign_details?.end_datetime) return;
+    const end = product?.campaign_details?.end_datetime;
+    if (!product?.is_in_campaign || !end) { setCountdown(null); return; }
     const tick = () => {
-      const dist = new Date(product.campaign_details.end_datetime) - Date.now();
-      if (dist <= 0) { setCountdown(null); return; }
+      const dist = new Date(end).getTime() - Date.now();
+      if (isNaN(dist) || dist <= 0) { setCountdown(null); return false; }
       setCountdown({
-        h: Math.floor((dist % (86400000)) / 3600000),
+        d: Math.floor(dist / 86400000),
+        h: Math.floor((dist % 86400000) / 3600000),
         m: Math.floor((dist % 3600000) / 60000),
       });
+      return true;
     };
-    tick();
-    const id = setInterval(tick, 30000);
+    if (!tick()) return;
+    const id = setInterval(() => { if (!tick()) clearInterval(id); }, 30000);
     return () => clearInterval(id);
   }, [product]);
 
@@ -528,143 +566,180 @@ const ProductCard = ({ product, onQuickView, onAddToCart, onLoginRequired, hasCo
     if (s) return s.final_price > 0 ? s.final_price : s.selling_price;
     return product.price || 0;
   };
-  const getOld = () => product.stocks?.[0]?.mrp || product.old_price || 0;
-  const price = parseFloat(getPrice());
-  const old = parseFloat(getOld());
-  const disc = product.is_in_campaign
-    ? product.campaign_details?.discount_percentage || 0
+  const price = parseFloat(getPrice()) || 0;
+  const old = getOldPriceOf(product);
+  const disc = product.is_in_campaign && product.campaign_details?.discount_percentage
+    ? Math.round(product.campaign_details.discount_percentage)
     : old > price ? Math.round(((old - price) / old) * 100) : 0;
 
-  const getImg = () => {
-    if (imgError) return "https://placehold.co/300x300/f0f4f8/94a3b8?text=N%2FA";
-    if (product.main_image) return product.main_image.startsWith("http") ? product.main_image : `http://localhost:8000/${product.main_image}`;
-    if (product.stocks?.find(s => s.variant_image)) {
-      const vi = product.stocks.find(s => s.variant_image).variant_image;
-      return vi.startsWith("http") ? vi : `http://localhost:8000/${vi}`;
-    }
-    return "https://placehold.co/300x300/f0f4f8/94a3b8?text=No+Image";
-  };
+  const campaignBadge = product.is_in_campaign
+    ? CAMPAIGN_BADGES[product.campaign_details?.campaign_type]
+    : null;
+  const condition = product.product_condition;
+  const imgSrc = imgError ? "https://placehold.co/600x600/f0f4f8/94a3b8?text=Image+Error" : getProductImage(product);
 
-  const getCampaignBadge = () => {
-    if (!product.is_in_campaign) return null;
-    const type = product.campaign_details?.campaign_type;
-    const configs = {
-      Flash: { label: "⚡ FLASH", cls: "bg-red-500" },
-      "Deal of the Day": { label: "🔥 DEAL", cls: "bg-purple-600" },
-      Featured: { label: "⭐ FEATURED", cls: "bg-blue-600" },
-    };
-    const cfg = configs[type];
-    if (!cfg) return null;
-    return (
-      <div className={`absolute top-2 left-2 z-10 ${cfg.cls} rounded-md px-1.5 py-0.5`}>
-        <p style={T.badge} className="text-white">{cfg.label}</p>
-      </div>
-    );
-  };
+  const goToDetail = () => navigate(`/product/${product.id}`);
 
   const handleAddToCart = async (e) => {
     e.preventDefault(); e.stopPropagation();
+    const stockId = product.stocks?.[0]?.id;
+    if (!stockId) return;
     if (!isAuthenticated()) {
-      sessionStorage.setItem("pendingCartProduct", JSON.stringify({ productStockId: product.stocks?.[0]?.id, quantity: 1 }));
+      sessionStorage.setItem("pendingCartProduct", JSON.stringify({ productStockId: stockId, quantity: 1 }));
       onLoginRequired();
       return;
     }
-    const stockId = product.stocks?.[0]?.id;
-    if (!stockId) return;
-    await onAddToCart(stockId, 1);
+    try {
+      setAdding(true);
+      await onAddToCart(stockId, 1);
+    } finally {
+      setAdding(false);
+    }
   };
 
   return (
-    <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 flex flex-col relative"
-      style={{ fontFamily: "'Inter', sans-serif" }}>
-
-      {/* Coupon ribbon */}
+    <div
+      role="link"
+      tabIndex={0}
+      onClick={goToDetail}
+      onKeyDown={(e) => { if (e.key === "Enter") goToDetail(); }}
+      className="relative flex h-full cursor-pointer flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-[0_2px_10px_rgba(0,0,0,0.08)] active:shadow-[0_10px_28px_rgba(0,0,0,0.16)] transition-all duration-300"
+      style={{ fontFamily: "'Inter', sans-serif" }}
+    >
+      {/* Special offers ribbon */}
       {hasCoupons && (
-        <div className="bg-gradient-to-r from-blue-600 to-blue-500 px-3 py-1.5 flex items-center justify-center gap-1.5">
-          <Tag size={10} color="white" />
-          <p style={{ ...T.badge, color: "white" }}>SPECIAL OFFERS AVAILABLE</p>
-          <Zap size={10} color="white" />
+        <div className="bg-gradient-to-r from-blue-600 via-blue-400 to-blue-500 px-3 py-1 text-center text-white shadow-md">
+          <div className="flex items-center justify-center gap-1.5">
+            <Tag size={10} />
+            <p style={T.badge} className="truncate">SPECIAL OFFERS AVAILABLE</p>
+            <Zap size={10} />
+          </div>
         </div>
       )}
 
-      {/* Image area */}
-      <div className="relative bg-gray-50" style={{ paddingTop: "85%" }}>
-        <img
-          src={getImg()}
-          alt={product.product_name}
-          onError={() => setImgError(true)}
-          className="absolute inset-0 w-full h-full object-contain p-3"
-        />
+      {/* Image area — poori image dikhti hai (object-contain, square) */}
+      <div className="relative p-2.5 pb-2">
+        <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-white">
+          <img
+            src={imgSrc}
+            alt={product.product_name}
+            loading="lazy"
+            className="h-full w-full object-contain"
+            onError={() => setImgError(true)}
+          />
+        </div>
 
-        {getCampaignBadge()}
+        {/* Top-left badges: campaign + discount */}
+        <div className="absolute left-4 top-4 z-10 flex flex-col items-start gap-1">
+          {campaignBadge && (
+            <span
+              style={T.badge}
+              className={`flex items-center gap-1 whitespace-nowrap rounded bg-gradient-to-r ${campaignBadge.cls} px-1.5 py-0.5 text-white shadow`}
+            >
+              {campaignBadge.icon && <Zap size={10} />}
+              {campaignBadge.label}
+            </span>
+          )}
+          {disc > 0 && (
+            <span style={T.badge} className="rounded bg-blue-600 px-1.5 py-0.5 text-white shadow">
+              -{disc}%
+            </span>
+          )}
+        </div>
 
-        {!product.is_in_campaign && disc > 0 && (
-          <div className="absolute top-2 left-2 bg-red-500 rounded-md px-1.5 py-0.5 z-10">
-            <p style={T.badge} className="text-white">{disc}% OFF</p>
-          </div>
+        {/* Top-right: product condition */}
+        {condition && (
+          <span
+            style={{ ...T.badge, letterSpacing: "0.03em" }}
+            className="absolute right-4 top-4 z-10 rounded bg-yellow-400 px-1.5 py-0.5 font-extrabold uppercase text-gray-900 shadow"
+          >
+            {condition}
+          </span>
         )}
 
-        {/* Quick view tap */}
+        {/* Quick view (mobile pe hamesha visible) */}
         <button
+          type="button"
           onClick={e => { e.preventDefault(); e.stopPropagation(); onQuickView(product); }}
-          className="absolute top-2 right-2 w-7 h-7 bg-white/90 rounded-full shadow flex items-center justify-center active:bg-white z-10"
+          aria-label="Quick View"
+          className="absolute bottom-4 right-4 z-20 rounded-full bg-white/95 p-2 text-blue-600 shadow-lg active:scale-95 active:bg-white"
         >
-          <Eye size={13} className="text-blue-600" />
+          <Eye size={14} />
         </button>
-
-        {/* Countdown overlay */}
-        {countdown && (
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-r from-blue-600 to-blue-500 px-2 py-1 flex items-center justify-center gap-1.5">
-            <p style={{ ...T.badge, color: "rgba(255,255,255,0.8)" }}>Ends in</p>
-            <p style={{ ...T.badge, color: "white" }}>{countdown.h}h {countdown.m}m</p>
-          </div>
-        )}
       </div>
 
-      {/* Content */}
-      <div className="p-2.5 flex flex-col flex-1 gap-1.5">
-        <p style={T.cardTitle} className="text-gray-900 line-clamp-2 leading-snug">{product.product_name}</p>
+      {/* Details */}
+      <div className="flex flex-1 flex-col border-t border-gray-100 px-3 py-2.5">
+        <p
+          style={T.cardTitle}
+          className="mb-1.5 line-clamp-2 min-h-[2.5rem] leading-snug text-gray-800"
+        >
+          {product.product_name}
+        </p>
 
-        {/* Price row */}
-        <div className="flex items-baseline gap-1.5">
-          <p style={{ fontSize: 15, fontWeight: 700 }} className="text-gray-900">₹{price.toLocaleString("en-IN", { minimumFractionDigits: 0 })}</p>
-          {old > price && <p style={{ fontSize: 11, fontWeight: 400 }} className="text-gray-400 line-through">₹{old.toLocaleString("en-IN")}</p>}
-        </div>
-
-
-        {/* Rating - ✅ Dynamic Rating */}
-        <div className="flex items-center gap-1">
+        {/* Rating */}
+        <div className="mb-2 flex items-center gap-1">
           <StarRating rating={Math.round(reviewStats.avg) || 0} />
-          <p style={T.cardSub} className="text-gray-400">({reviewStats.count})</p>
+          <p style={T.cardSub} className="text-gray-500">({reviewStats.count})</p>
         </div>
 
-        {/* Coupon button */}
-        {hasCoupons && (
-          <button
-            onClick={e => { e.preventDefault(); e.stopPropagation(); onViewCoupons(product); }}
-            className="flex items-center gap-1.5 bg-blue-50 rounded-xl px-2.5 py-1.5 active:bg-blue-100 mt-0.5"
-          >
-            <div className="w-4 h-4 bg-blue-600 rounded flex items-center justify-center shrink-0">
-              <Tag size={9} color="white" />
-            </div>
-            <p style={T.badge} className="text-blue-700 flex-1 text-left">View coupons</p>
-            <ChevronRight size={11} className="text-blue-400" />
-          </button>
-        )}
+        <div className="mt-auto">
+          {/* Price */}
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <p style={{ fontSize: 15, fontWeight: 700 }} className="text-blue-600">
+              ₹{price.toLocaleString("en-IN", { minimumFractionDigits: 0 })}
+            </p>
+            {old > price && (
+              <p style={T.cardSub} className="text-gray-400 line-through">₹{old.toLocaleString("en-IN")}</p>
+            )}
+            {disc > 0 && (
+              <p style={T.badge} className="text-green-600">{disc}% off</p>
+            )}
+          </div>
 
-        {/* Actions */}
-        <div className="flex gap-2 mt-auto pt-1">
+          {/* Countdown */}
+          {countdown && (
+            <div className="mt-2 flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-blue-500 px-2.5 py-1.5 text-white shadow-sm">
+              <p style={{ ...T.badge, color: "rgba(255,255,255,0.8)" }}>Ends in</p>
+              <div className="flex items-center gap-1">
+                {countdown.d > 0 && (
+                  <span style={T.badge} className="rounded bg-white/20 px-1.5 py-0.5">{countdown.d}d</span>
+                )}
+                <span style={T.badge} className="rounded bg-white/20 px-1.5 py-0.5">{countdown.h}h</span>
+                <span style={T.badge} className="rounded bg-white/20 px-1.5 py-0.5">{countdown.m}m</span>
+              </div>
+            </div>
+          )}
+
+          {/* Coupon offers */}
+          {hasCoupons && (
+            <button
+              type="button"
+              onClick={e => { e.preventDefault(); e.stopPropagation(); onViewCoupons(product); }}
+              className="mt-2 flex w-full items-center justify-between rounded-lg border border-blue-200 bg-blue-50 p-2 text-left active:bg-blue-100"
+            >
+              <div className="flex items-center gap-2">
+                <div className="rounded bg-blue-500 p-1">
+                  <Tag size={10} color="white" />
+                </div>
+                <div>
+                  <p style={T.badge} className="text-gray-800">Special Offers Available</p>
+                  <p style={{ fontSize: 9, fontWeight: 400 }} className="text-gray-600">View all coupons</p>
+                </div>
+              </div>
+              <ChevronRight size={14} className="text-gray-400" />
+            </button>
+          )}
+
+          {/* Add to cart (card click detail page nahi kholta) */}
           <button
+            type="button"
+            disabled={adding || !product.stocks?.[0]?.id}
             onClick={handleAddToCart}
-            className="flex-1 py-2 bg-blue-600 rounded-xl flex items-center justify-center active:bg-blue-700"
+            className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-full bg-blue-600 py-2 text-white shadow-sm active:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <ShoppingCart size={14} color="white" />
-          </button>
-          <button
-            onClick={e => { e.preventDefault(); e.stopPropagation(); navigate(`/product/${product.id}`); }}
-            className="flex-1 py-2 bg-gray-100 rounded-xl flex items-center justify-center active:bg-gray-200"
-          >
-            <Eye size={14} className="text-gray-600" />
+            <ShoppingCart size={14} />
+            <p style={T.pill}>{adding ? "Adding..." : "Add to cart"}</p>
           </button>
         </div>
       </div>
@@ -674,16 +749,13 @@ const ProductCard = ({ product, onQuickView, onAddToCart, onLoginRequired, hasCo
 
 // ─── Skeleton Card ────────────────────────────────────────────────────────────
 const SkeletonCard = () => (
-  <div className="bg-white rounded-2xl overflow-hidden animate-pulse">
-    <div className="bg-gray-200" style={{ paddingTop: "85%" }} />
-    <div className="p-2.5 space-y-2">
-      <div className="h-3.5 bg-gray-200 rounded w-full" />
-      <div className="h-3 bg-gray-200 rounded w-2/3" />
-      <div className="h-4 bg-gray-200 rounded w-1/2" />
-      <div className="flex gap-2 pt-1">
-        <div className="flex-1 h-8 bg-gray-200 rounded-xl" />
-        <div className="flex-1 h-8 bg-gray-200 rounded-xl" />
-      </div>
+  <div className="flex h-full animate-pulse flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-md">
+    <div className="m-2.5 aspect-square rounded-lg bg-gray-200" />
+    <div className="border-t border-gray-100 p-3">
+      <div className="mb-2 h-4 w-3/4 rounded bg-gray-200" />
+      <div className="mb-3 h-3 w-1/2 rounded bg-gray-200" />
+      <div className="mb-3 h-5 w-1/3 rounded bg-gray-200" />
+      <div className="h-8 w-full rounded-full bg-gray-200" />
     </div>
   </div>
 );
@@ -694,6 +766,7 @@ export default function MobileProductListPage() {
   const [categories, setCategories] = useState([]);
   const [brands, setBrands] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [minPrice, setMinPrice] = useState(0);
   const [maxPrice, setMaxPrice] = useState(0);
@@ -712,6 +785,15 @@ export default function MobileProductListPage() {
   const [showSearch, setShowSearch] = useState(false);
   const searchRef = useRef(null);
 
+  // ── Pagination (backend ab paginated response deta hai) ──
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [totalCount, setTotalCount] = useState(null);
+  const observerRef = useRef(null);
+  const isFirstRender = useRef(true);
+  const requestIdRef = useRef(0); // purane (stale) response ko ignore karne ke liye
+
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const { addToast } = useToast();
@@ -719,56 +801,95 @@ export default function MobileProductListPage() {
   const totalActiveFilters = selectedCategoryIds.length + selectedBrands.length +
     selectedConditions.length + (vendorSearch ? 1 : 0) + ((minPrice > 0 || maxPrice > 0) ? 1 : 0);
 
-  // ── Data Fetching ──────────────────────────────────────────────────────────
-  useEffect(() => {
-    fetchProducts();
-    fetchFilters();
-  }, []);
-
-  useEffect(() => {
-    // Add class to body to hide bottom navigation via CSS
-    document.body.classList.add('mpd-page');
-
-    // Also add inline style as backup
-    const style = document.createElement('style');
-    style.id = 'mpd-inline-hide';
-    style.textContent = `
-      .fixed.bottom-0.left-0.right-0.z-\\[100\\],
-      .md\\:hidden.fixed.bottom-0 {
-        display: none !important;
-      }
-    `;
-    document.head.appendChild(style);
-
-    return () => {
-      document.body.classList.remove('mpd-page');
-      const styleEl = document.getElementById('mpd-inline-hide');
-      if (styleEl) styleEl.remove();
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  const formatProduct = (product) => {
+    const stock = product.stocks?.[0];
+    return {
+      ...product,
+      product_name: product.product_name || "Unnamed Product",
+      rating: product.rating || 4,
+      review_count: product.review_count || 0,
+      stocks: product.stocks || [],
+      gallery: product.gallery || [],
+      price: stock
+        ? parseFloat(stock.final_price > 0 ? stock.final_price : stock.selling_price) || 0
+        : product.price || 0,
+      old_price: stock ? parseFloat(stock.mrp) || 0 : product.old_price || 0,
     };
-  }, []);
+  };
 
-  const fetchProducts = async () => {
+  // Filters ab backend ko jaate hain (website jaise)
+  const buildQueryParams = (pageNum) => {
+    const params = new URLSearchParams();
+    params.set("page", pageNum);
+    params.set("page_size", PAGE_SIZE);
+    if (selectedCategoryIds.length > 0) params.set("category_ids", selectedCategoryIds.join(","));
+    if (selectedBrands.length > 0) params.set("brand_ids", selectedBrands.join(","));
+    if (selectedConditions.length > 0) params.set("conditions", selectedConditions.join(","));
+    if (vendorSearch) params.set("vendor_search", vendorSearch);
+    if (minPrice > 0) params.set("min_price", minPrice);
+    if (maxPrice > 0) params.set("max_price", maxPrice);
+    return params.toString();
+  };
+
+  // ── Data Fetching ──────────────────────────────────────────────────────────
+  const fetchProductsWithFilters = async (pageNum, replace = false) => {
+    const reqId = ++requestIdRef.current;
     try {
-      setLoading(true);
-      const res = await publicAxios.get("ecommerce/public/products/");
-      if (Array.isArray(res.data)) {
-        const formatted = res.data.map(p => ({
-          ...p,
-          price: (() => {
-            const s = p.stocks?.[0];
-            if (s) return parseFloat(s.final_price > 0 ? s.final_price : s.selling_price) || 0;
-            return p.price || 0;
-          })(),
-          old_price: parseFloat(p.stocks?.[0]?.mrp || p.old_price || 0),
-        }));
-        setProducts(formatted);
-        setTimeout(() => fetchCouponsForAll(formatted), 600);
+      if (replace) {
+        setLoading(true);
+        setLoadingMore(false);
+      } else {
+        setLoadingMore(true);
       }
-    } catch {
-      loadSample();
+      setError(null);
+
+      const res = await publicAxios.get(`ecommerce/public/products/?${buildQueryParams(pageNum)}`);
+      if (reqId !== requestIdRef.current) return; // naya request aa chuka hai, ye purana hai
+
+      let list;
+      let more = false;
+      let count = null;
+
+      if (res.data && Array.isArray(res.data.results)) {
+        // ✅ Paginated response: { count, next, previous, results: [...] }
+        list = res.data.results.map(formatProduct);
+        more = res.data.next !== null && res.data.next !== undefined;
+        count = typeof res.data.count === "number" ? res.data.count : null;
+      } else if (Array.isArray(res.data)) {
+        // Purana (non-paginated) format — safety fallback
+        list = res.data.map(formatProduct);
+        more = false;
+        count = list.length;
+      } else {
+        throw new Error("Invalid API response format");
+      }
+
+      setProducts(prev => (replace ? list : [...prev, ...list]));
+      setHasMore(more);
+      setPage(pageNum);
+      if (count !== null) setTotalCount(count);
+
+      setTimeout(() => fetchCouponsForAll(list), 500);
+    } catch (err) {
+      if (reqId !== requestIdRef.current) return;
+      console.error("Error fetching products:", err);
+      if (replace) {
+        setProducts([]);
+        setError("Failed to load products. Please try again.");
+      }
+      setHasMore(false);
     } finally {
-      setLoading(false);
+      if (reqId === requestIdRef.current) {
+        setLoading(false);
+        setLoadingMore(false);
+      }
     }
+  };
+
+  const fetchMoreProducts = () => {
+    if (loadingMore || !hasMore || loading) return;
+    fetchProductsWithFilters(page + 1, false);
   };
 
   const fetchFilters = async () => {
@@ -800,22 +921,73 @@ export default function MobileProductListPage() {
     } catch { }
   };
 
-  const loadSample = () => setProducts([
-    {
-      id: 1, product_name: "iPhone 14 Pro Max", price: 114900, old_price: 129900,
-      main_image: "https://6valley.6amtech.com/storage/app/public/product/thumbnail/2024-09-22-66f0027e72108.webp",
-      rating: 5, review_count: 12, stocks: [{ id: 1, final_price: 114900, selling_price: 114900, mrp: 129900, maximum_order_quantity: 5 }]
-    },
-    {
-      id: 2, product_name: "Beauty Jelly Lipstick", price: 320, old_price: 450,
-      main_image: "https://6valley.6amtech.com/storage/app/public/product/thumbnail/2024-09-19-66ec01ed63b50.webp",
-      rating: 4, review_count: 20, stocks: [{ id: 2, final_price: 320, selling_price: 320, mrp: 450, maximum_order_quantity: 20 }]
-    },
-  ]);
+  // Categories / brands ek baar
+  useEffect(() => {
+    fetchFilters();
+  }, []);
+
+  // Products: pehli baar turant, baad me har filter badalne par (debounced)
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      setPage(1);
+      setHasMore(true);
+      fetchProductsWithFilters(1, true);
+      return;
+    }
+    const timer = setTimeout(() => {
+      setPage(1);
+      setHasMore(true);
+      fetchProductsWithFilters(1, true);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [selectedCategoryIds, selectedBrands, selectedConditions, vendorSearch, minPrice, maxPrice]);
+
+  // Infinite scroll
+  useEffect(() => {
+    if (!observerRef.current || loading) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMore) {
+          fetchMoreProducts();
+        }
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(observerRef.current);
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore, page, loading]);
+
+  // Bottom navigation hide
+  useEffect(() => {
+    document.body.classList.add('mpd-page');
+
+    const style = document.createElement('style');
+    style.id = 'mpd-inline-hide';
+    style.textContent = `
+      .fixed.bottom-0.left-0.right-0.z-\\[100\\],
+      .md\\:hidden.fixed.bottom-0 {
+        display: none !important;
+      }
+    `;
+    document.head.appendChild(style);
+
+    return () => {
+      document.body.classList.remove('mpd-page');
+      const styleEl = document.getElementById('mpd-inline-hide');
+      if (styleEl) styleEl.remove();
+    };
+  }, []);
 
   // ── Cart ───────────────────────────────────────────────────────────────────
   const addToCart = async (stockId, qty = 1) => {
-    if (!isAuthenticated()) { setShowLoginModal(true); return; }
+    if (!isAuthenticated()) {
+      addToast("Please login to add items to cart", "warning");
+      sessionStorage.setItem("pendingCartProduct", JSON.stringify({ productStockId: stockId, quantity: qty }));
+      sessionStorage.setItem("redirectAfterLogin", window.location.pathname);
+      setShowLoginModal(true);
+      return;
+    }
     try {
       const res = await axiosInstance.post("api/public/cart/", { product_stock: stockId, quantity: qty });
       if (res.data.success) {
@@ -829,26 +1001,20 @@ export default function MobileProductListPage() {
     }
   };
 
-  // ── Filtered / Sorted Products ─────────────────────────────────────────────
+  // ── Search (loaded products par) + Sort ────────────────────────────────────
+  // Category / brand / condition / price / vendor filters backend se aate hain,
+  // isliye yahan sirf search box aur sort lagta hai.
   const filteredProducts = useMemo(() => {
-    let list = products.filter(p => {
-      const catId = Number(p.category_details?.id || p.category);
-      const brandId = Number(p.brand_details?.id || p.brand);
-      const price = Number(p.price || p.stocks?.[0]?.final_price || 0);
-      const cond = p.product_condition || "New";
-      const vendor = p.vendor_details?.business_name?.toLowerCase() || "";
-      const name = p.product_name?.toLowerCase() || "";
-      const search = searchTerm.toLowerCase().trim();
+    const search = searchTerm.toLowerCase().trim();
+    let list = products;
 
-      return (
-        (selectedCategoryIds.length === 0 || selectedCategoryIds.map(Number).includes(catId)) &&
-        (selectedBrands.length === 0 || selectedBrands.map(Number).includes(brandId)) &&
-        (minPrice === 0 && maxPrice === 0 || (price >= minPrice && price <= maxPrice)) &&
-        (selectedConditions.length === 0 || selectedConditions.includes(cond)) &&
-        (vendorSearch === "" || vendor.includes(vendorSearch.toLowerCase()) || name.includes(vendorSearch.toLowerCase())) &&
-        (search === "" || name.includes(search) || vendor.includes(search))
-      );
-    });
+    if (search) {
+      list = list.filter(p => {
+        const name = p.product_name?.toLowerCase() || "";
+        const vendor = p.vendor_details?.business_name?.toLowerCase() || "";
+        return name.includes(search) || vendor.includes(search);
+      });
+    }
 
     if (sortBy === "price_asc") list = [...list].sort((a, b) => a.price - b.price);
     else if (sortBy === "price_desc") list = [...list].sort((a, b) => b.price - a.price);
@@ -856,7 +1022,7 @@ export default function MobileProductListPage() {
     else if (sortBy === "newest") list = [...list].sort((a, b) => b.id - a.id);
 
     return list;
-  }, [products, selectedCategoryIds, selectedBrands, selectedConditions, minPrice, maxPrice, vendorSearch, searchTerm, sortBy]);
+  }, [products, searchTerm, sortBy]);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
   const handleViewCoupons = (product) => {
@@ -887,6 +1053,21 @@ export default function MobileProductListPage() {
     setMinPrice(0);
     setMaxPrice(0);
   };
+
+  const handleLoginClick = () => {
+    setShowLoginModal(false);
+    sessionStorage.setItem("redirectAfterLogin", window.location.pathname);
+    navigate("/customer/login", { state: { from: window.location.pathname } });
+  };
+
+  const handleRegisterClick = () => {
+    setShowLoginModal(false);
+    navigate("/customer/registration", { state: { from: window.location.pathname } });
+  };
+
+  const resultsLabel = loading
+    ? "Loading..."
+    : `${searchTerm.trim() ? filteredProducts.length : (totalCount ?? filteredProducts.length)} results`;
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -924,9 +1105,7 @@ export default function MobileProductListPage() {
             <>
               <div className="flex-1">
                 <p style={T.pageTitle} className="text-gray-900">Products</p>
-                <p style={T.pageSubtitle} className="text-gray-500">
-                  {loading ? "Loading..." : `${filteredProducts.length} results`}
-                </p>
+                <p style={T.pageSubtitle} className="text-gray-500">{resultsLabel}</p>
               </div>
               <button onClick={() => setShowSearch(true)} className="p-2 rounded-xl bg-gray-100 active:bg-gray-200">
                 <Search size={17} className="text-gray-700" />
@@ -1000,6 +1179,13 @@ export default function MobileProductListPage() {
               <X size={9} className="text-green-500" />
             </button>
           ))}
+          {vendorSearch && (
+            <button onClick={() => setVendorSearch("")}
+              className="shrink-0 flex items-center gap-1 bg-purple-50 border border-purple-200 px-2.5 py-1 rounded-full">
+              <p style={T.badge} className="text-purple-700">Vendor: {vendorSearch}</p>
+              <X size={9} className="text-purple-500" />
+            </button>
+          )}
           {(minPrice > 0 || maxPrice > 0) && (
             <button onClick={() => { setMinPrice(0); setMaxPrice(0); }}
               className="shrink-0 flex items-center gap-1 bg-purple-50 border border-purple-200 px-2.5 py-1 rounded-full">
@@ -1015,6 +1201,17 @@ export default function MobileProductListPage() {
         {loading ? (
           <div className="grid grid-cols-2 gap-3">
             {Array(8).fill(0).map((_, i) => <SkeletonCard key={i} />)}
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
+            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4">
+              <Package size={28} className="text-red-400" />
+            </div>
+            <p style={T.emptyTitle} className="text-gray-800">Something went wrong</p>
+            <p style={T.emptySubtitle} className="text-gray-500 mt-1.5 max-w-xs">{error}</p>
+            <button onClick={() => fetchProductsWithFilters(1, true)} className="mt-4 px-5 py-2.5 bg-blue-600 rounded-full active:bg-blue-700">
+              <p style={{ ...T.pill, color: "white" }}>Try Again</p>
+            </button>
           </div>
         ) : filteredProducts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
@@ -1034,19 +1231,37 @@ export default function MobileProductListPage() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
-            {filteredProducts.map(p => (
-              <ProductCard
-                key={p.id}
-                product={p}
-                onQuickView={openQuickView}
-                onAddToCart={addToCart}
-                onLoginRequired={() => setShowLoginModal(true)}
-                hasCoupons={!!(productCoupons[p.id]?.length)}
-                onViewCoupons={handleViewCoupons}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              {filteredProducts.map(p => (
+                <ProductCard
+                  key={p.id}
+                  product={p}
+                  onQuickView={openQuickView}
+                  onAddToCart={addToCart}
+                  onLoginRequired={() => setShowLoginModal(true)}
+                  hasCoupons={!!(productCoupons[p.id]?.length)}
+                  onViewCoupons={handleViewCoupons}
+                />
+              ))}
+            </div>
+
+            {/* Infinite scroll sentinel */}
+            <div ref={observerRef} className="w-full py-6 flex justify-center">
+              {loadingMore && (
+                <div className="flex items-center gap-2">
+                  <svg className="animate-spin h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                  </svg>
+                  <p style={T.cardSub} className="text-gray-500">Loading more products...</p>
+                </div>
+              )}
+              {!hasMore && !loadingMore && products.length > 0 && (
+                <p style={T.cardSub} className="text-gray-400">You've seen all products</p>
+              )}
+            </div>
+          </>
         )}
       </div>
 
@@ -1068,8 +1283,8 @@ export default function MobileProductListPage() {
       <LoginModal
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
-        onLogin={() => { setShowLoginModal(false); navigate("/customer/login"); }}
-        onRegister={() => { setShowLoginModal(false); navigate("/customer/registration"); }}
+        onLogin={handleLoginClick}
+        onRegister={handleRegisterClick}
       />
 
       {showCouponsModal && modalProduct && (

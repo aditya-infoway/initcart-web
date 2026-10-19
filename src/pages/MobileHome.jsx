@@ -1,7 +1,7 @@
 // MobileHomeView.jsx
 import React, { useState, useEffect, useCallback } from 'react'
 import MobileAppHeader from './MobileAppHeader'
-import MobileShopSection from './MobileShopSection'
+import MobileShopSection from './Mobileshopsection.jsx'
 
 // Desktop Components
 import Banner from './Banner.jsx'
@@ -92,7 +92,7 @@ export default function MobileHomeView() {
   // ── Desktop layout ────────────────────────────────────────────────────────
   return (
     <main className="hidden md:block bg-gray-50">
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-1">
+      <section className="mx-auto  px-4 sm:px-6 lg:px-8 pt-1">
         <Banner />
         <ServiceSegmentSlider />
         <CategorySlider />

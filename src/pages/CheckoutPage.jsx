@@ -513,43 +513,42 @@ useEffect(() => {
     }));
   };
 
-  // Save new address
-  const saveNewAddress = async () => {
-    if (!newAddress.full_name || !newAddress.phone || !newAddress.address_line1 ||
-      !newAddress.city || !newAddress.state || !newAddress.pincode) {
-      addToast("Please fill all required fields", "error");
-      return;
+const saveNewAddress = async () => {
+  if (!newAddress.full_name || !newAddress.phone || !newAddress.address_line1 ||
+    !newAddress.city || !newAddress.state || !newAddress.pincode) {
+    addToast("Please fill all required fields", "error");
+    return;
+  }
+
+  try {
+    const response = await axiosInstance.post('/api/public/customer/addresses/', newAddress);
+
+    // 2xx = saved. Sirf tab fail maano jab backend explicitly success:false bheje
+    const saved = response.status >= 200 && response.status < 300 && response.data?.success !== false;
+
+    if (saved) {
+      addToast("Address saved successfully", "success");
+      await fetchAddresses();
+      setActiveShippingTab("history");
+      setNewAddress({
+        address_type: "both", full_name: "", phone: "", email: "",
+        address_line1: "", address_line2: "", city: "", state: "",
+        pincode: "", country: "India", is_default: false
+      });
+    } else {
+      addToast(response.data?.message || "Failed to save address", "error");
     }
-
-    try {
-      const response = await axiosInstance.post('/api/public/customer/addresses/', newAddress);
-
-      if (response.data && response.data.success) {
-        addToast("Address saved successfully", "success");
-        await fetchAddresses();
-        setActiveShippingTab("history");
-
-        setNewAddress({
-          address_type: "both",
-          full_name: "",
-          phone: "",
-          email: "",
-          address_line1: "",
-          address_line2: "",
-          city: "",
-          state: "",
-          pincode: "",
-          country: "India",
-          is_default: false
-        });
-      } else {
-        addToast(response.data?.message || "Failed to save address", "error");
-      }
-    } catch (err) {
-      addToast(err.response?.data?.message || "Failed to save address", "error");
-    }
-  };
-
+  } catch (err) {
+    console.error("Save address error:", err.response?.status, err.response?.data);
+    addToast(
+      err.response?.data?.message ||
+      err.response?.data?.detail ||
+      "Failed to save address",
+      "error"
+    );
+    await fetchAddresses(); // agar backend me save ho gaya ho to list sync rahe
+  }
+};
   // Handle checkout with coupon
   const handleCheckout = async () => {
     // ========== VALIDATION ==========
@@ -609,7 +608,6 @@ useEffect(() => {
       // ========== HANDLE RAZORPAY ==========
       if (paymentMethod === "razorpay") {
         // ✅ STEP 1: Create Razorpay order (NO database order yet)
-
 
         const razorpayOrderData = {
           billing_address_id: selectedBillingAddress.id,
@@ -928,7 +926,7 @@ const options = {
 
   return (
     <div className="bg-gray-100 min-h-screen py-8 px-4 md:px-8">
-      <div className="max-w-7xl mx-auto">
+      <div className="mx-auto">
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900">Checkout</h1>

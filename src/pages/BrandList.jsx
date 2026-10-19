@@ -163,7 +163,7 @@ const BrandList = () => {
   if (loading) {
     return (
       <div className="w-full bg-gradient-to-b from-gray-50 to-white py-8">
-        <div className="max-w-7xl mx-auto px-4">
+        <div className="mx-auto px-4">
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-gray-800 mb-2">Brands</h2>
             <div className="w-64 h-10 bg-gray-200 rounded animate-pulse"></div>
@@ -189,7 +189,7 @@ const BrandList = () => {
       {/* Header Spacer - Matches Header component */}
       <div style={{ height: 35 }} />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className=" mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header Section - Matches Header alignment */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-2">Shop by Brands</h2>
@@ -251,7 +251,7 @@ const BrandList = () => {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-8">
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4 mb-9">
               {currentBrands.map((brand) => (
                 <div
                   key={brand.id}

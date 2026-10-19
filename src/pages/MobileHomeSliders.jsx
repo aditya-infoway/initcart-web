@@ -223,7 +223,7 @@ function ProductCard({ product, onAddToCart }) {
     e.stopPropagation()
     onAddToCart(product)
   }}
-  className="mt-2 w-full py-1.5 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white rounded-lg transition-colors duration-150 flex items-center justify-center"
+  className="mt-2 w-full py-1.5 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white rounded-full transition-colors duration-150 flex items-center justify-center"
 >
   <ShoppingCart size={12} />
 </button>

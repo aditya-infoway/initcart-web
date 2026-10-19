@@ -437,7 +437,7 @@ export default function Header() {
 
       {/* Top Bar - Desktop only */}
       <div className="hidden md:block bg-gray-100 text-xs text-gray-600">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-8 flex items-center justify-between">
+        <div className="mx-auto px-4 sm:px-6 lg:px-8 h-8 flex items-center justify-between">
           <div className="flex items-center gap-4"><span>USD $</span><span>English</span></div>
           <div className="flex items-center gap-4">
             {isLoggedIn && userData && <span className="text-green-600 font-medium">Welcome back, {userData.username}!</span>}
@@ -449,7 +449,7 @@ export default function Header() {
 
       {/* Main Header - Desktop */}
       <div ref={fixedRef} className={`hidden md:block fixed top-0 inset-x-0 z-40 bg-white w-full transition-all duration-300 ${scrolled ? "shadow-sm" : ""}`}>
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto px-4 sm:px-6 lg:px-8">
           <div className="h-16 flex items-center justify-between">
             <div className="hidden md:flex items-center gap-3">
               <Link to="/" className="flex items-center gap-2">
@@ -600,7 +600,7 @@ export default function Header() {
 
       {/* Bottom Nav Bar - Desktop */}
       <div className="hidden md:block bg-blue-800 text-white relative z-30">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative">
+        <div className="mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="h-12 flex items-center gap-6">
             <div className="h-full z-50" onMouseEnter={() => setShowCategories(true)} onMouseLeave={() => setShowCategories(false)}>
               <button className="inline-flex items-center gap-2 rounded-md bg-blue-700 hover:bg-blue-600 px-3 py-2 text-sm h-full">

@@ -16,7 +16,7 @@ import HomeSliders from './HomeSliders.jsx'
 export default function Home() {
   return (
     <main className=" bg-gray-50">
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-1">
+      <section className="mx-auto  px-4 sm:px-6 lg:px-8 pt-1">
         <Banner />
   
         <ServiceSegmentSlider />

@@ -492,7 +492,7 @@ const DealOfDayListPage = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 py-8 px-4">
-        <div className="max-w-7xl mx-auto">
+        <div className="mx-auto">
           <div className="animate-pulse">
             <div className="h-64 bg-white rounded-2xl shadow-xl mb-8"></div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -545,7 +545,7 @@ const DealOfDayListPage = () => {
         title="Deal Filters"
       />
 
-      <div className="max-w-7xl mx-auto ">
+      <div className=" mx-auto ">
         {/* FANCY COUNTDOWN HEADER SECTION */}
         <div className="relative mb-12 overflow-hidden rounded-3xl bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 shadow-2xl">
           {/* Animated Background Elements */}

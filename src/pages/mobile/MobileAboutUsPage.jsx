@@ -19,7 +19,8 @@ import {
   FiClock,
   FiSend,
   FiCheckCircle,
-  FiGlobe
+  FiGlobe,
+  FiDownload
 } from 'react-icons/fi';
 import { FaWhatsapp } from 'react-icons/fa';
 import { RiTwitterXLine } from 'react-icons/ri';
@@ -65,7 +66,8 @@ const MobileAboutUsPage = () => {
 
   const loadInfo = async () => {
     try {
-      const res = await publicAxios.get('api/init-admin-footer/');
+      // 🔥 Fixed endpoint (added /banners/ to match website)
+      const res = await publicAxios.get('api/banners/init-admin-footer/');
       setInfo(res.data);
     } catch (err) {
       console.error('Footer API error:', err);
@@ -92,6 +94,11 @@ const MobileAboutUsPage = () => {
   const openDocument = (url) => {
     if (!url) return;
     window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const openApk = () => {
+    if (!info?.apk_file_url) return;
+    window.open(info.apk_file_url, "_blank", "noopener,noreferrer");
   };
 
   const handleSubscribe = () => {
@@ -136,7 +143,7 @@ const MobileAboutUsPage = () => {
     { name: "Work Place", path: "/workplacehome" },
   ];
 
-  // Other Links -> now mapped to uploaded document PDFs (view-only, opens in new tab, no download)
+  // Other Links
   const otherLinks = [
     { name: "Contact Us", url: docs.contact_us_pdf_url },
     { name: "Terms & Conditions", url: docs.terms_conditions_pdf_url },
@@ -218,6 +225,30 @@ const MobileAboutUsPage = () => {
             </div>
           </div>
         </div>
+
+        {/* Brochure Download (NEW) */}
+        {info?.brochure_pdf_url && (
+          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+            <h3 className="text-[13px] font-semibold text-gray-800 mb-3 flex items-center gap-2">
+              <FiFileText size={14} className="text-blue-600" /> Business Brochure
+            </h3>
+            <button
+              onClick={() => openDocument(info.brochure_pdf_url)}
+              className="w-full flex items-center justify-between p-3 bg-blue-50 rounded-xl hover:bg-blue-100 transition"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                  <FiDownload size={16} className="text-white" />
+                </div>
+                <div className="text-left">
+                  <p className="text-[12px] font-semibold text-gray-900">Download Brochure</p>
+                  <p className="text-[10px] text-gray-500">PDF Document</p>
+                </div>
+              </div>
+              <FiArrowLeft size={14} className="text-blue-600 rotate-180" />
+            </button>
+          </div>
+        )}
 
         {/* Quick Links */}
         <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
@@ -313,46 +344,49 @@ const MobileAboutUsPage = () => {
             ))}
           </div>
         </div>
-{/* Download Our App */}
-<div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-  <h3 className="text-[14px] font-semibold text-gray-900 mb-1">
-    Download Our App
-  </h3>
 
-  <p className="text-[11px] text-gray-500 mb-5">
-    Shop faster with our mobile application.
-  </p>
+        {/* Download Our App (UPDATED to use dynamic APK link) */}
+        <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+          <h3 className="text-[14px] font-semibold text-gray-900 mb-1">
+            Download Our App
+          </h3>
 
-  <div className="flex items-center justify-center gap-4">
+          <p className="text-[11px] text-gray-500 mb-5">
+            Shop faster with our mobile application.
+          </p>
 
-    <a
-      href="https://play.google.com/store/apps/details?id=com.yourpackage"
-      target="_blank"
-      rel="noopener noreferrer"
-      className="transition-transform hover:scale-105 active:scale-95"
-    >
-      <img
-        src={playStoreBadge}
-        alt="Google Play"
-        className="h-14 w-auto object-contain"
-      />
-    </a>
+          <div className="flex items-center justify-center gap-4">
+            <button
+              type="button"
+              onClick={openApk}
+              disabled={!info?.apk_file_url}
+              className={`transition-transform hover:scale-105 active:scale-95 bg-transparent p-0 border-0 ${
+                !info?.apk_file_url ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+              }`}
+            >
+              <img
+                src={playStoreBadge}
+                alt="Download Android APK"
+                className="h-14 w-auto object-contain"
+              />
+            </button>
 
-    <a
-      href="https://apps.apple.com/"
-      target="_blank"
-      rel="noopener noreferrer"
-      className="transition-transform hover:scale-105 active:scale-95"
-    >
-      <img
-        src={appStoreBadge}
-        alt="App Store"
-        className="h-10 w-auto object-contain"
-      />
-    </a>
-
-  </div>
-</div>
+            <button
+              type="button"
+              onClick={openApk}
+              disabled={!info?.apk_file_url}
+              className={`transition-transform hover:scale-105 active:scale-95 bg-transparent p-0 border-0 ${
+                !info?.apk_file_url ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+              }`}
+            >
+              <img
+                src={appStoreBadge}
+                alt="Download App"
+                className="h-10 w-auto object-contain"
+              />
+            </button>
+          </div>
+        </div>
 
         {/* Newsletter */}
         <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-5 text-white">
@@ -378,7 +412,7 @@ const MobileAboutUsPage = () => {
           )}
         </div>
 
-        {/* Copyright */}
+        {/* Copyright */} 
         <div className="text-center py-4">  
           <p className="text-[10px] text-gray-400">© 2025 Initcart. All rights reserved.</p>
         </div>

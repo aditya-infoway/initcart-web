@@ -594,7 +594,7 @@ const Deal = () => {
 
       {/* ✅ Sirf tab dikhao jab koi content ho */}
       {hasDealContent && (
-        <div className="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-4 gap-6 bg-gray-50">
+        <div className="mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-4 gap-6 bg-gray-50">
           {/* 🎯 DYNAMIC DEAL OF THE DAY - SLIDER SECTION */}
           {dealProducts.length > 0 && (
             <div className="rounded-xl p-5 shadow-md flex flex-col items-center border border-blue-500 bg-white relative">
@@ -906,7 +906,7 @@ const Deal = () => {
       )}
 
       {/* 📢 Two Marketing Banners - YEH HAMESHA DIKHENGE */}
-      <section className="py-8 max-w-7xl mx-auto px-4">
+      <section className="py-8 mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Slot 1 */}
           {slot1 ? (

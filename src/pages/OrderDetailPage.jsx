@@ -48,7 +48,9 @@ import {
     FiArrowLeft,
     FiBox
 } from 'react-icons/fi';
+import { FaUndoAlt } from 'react-icons/fa';
 
+// Helper: build full image URL for an order item
 const getItemImage = (item) => {
     const imagePath =
         item.product_details?.variant_image ||
@@ -73,7 +75,7 @@ const OrderDetailsPage = () => {
     const [generatingPDF, setGeneratingPDF] = useState(false);
     const [retryCount, setRetryCount] = useState(0);
 
-    // Status configuration
+    // Status configuration — colors, icons, labels for each order status
     const statusConfig = {
         'pending': {
             bg: 'bg-yellow-100',
@@ -126,6 +128,7 @@ const OrderDetailsPage = () => {
         }
     };
 
+    // Payment status color classes
     const paymentStatusConfig = {
         'pending': 'bg-yellow-100 text-yellow-800',
         'completed': 'bg-green-100 text-green-800',
@@ -133,7 +136,7 @@ const OrderDetailsPage = () => {
         'refunded': 'bg-gray-100 text-gray-800'
     };
 
-    // Check authentication
+    // Check authentication — returns true/false/null (null = still loading)
     const checkAuth = useCallback(() => {
         if (authLoading) return null;
 
@@ -148,7 +151,7 @@ const OrderDetailsPage = () => {
         return true;
     }, [authLoading, isAuthenticated, refreshAuth]);
 
-    // Fetch order details
+    // Fetch order details from API
     const fetchOrderDetails = useCallback(async () => {
         if (authLoading) {
             setTimeout(() => fetchOrderDetails(), 500);
@@ -167,13 +170,9 @@ const OrderDetailsPage = () => {
         setError(null);
 
         try {
-
-
             const response = await axiosInstance.get('/api/public/orders/detail/', {
                 params: { order_number: orderNumber }
             });
-
-
 
             if (response.data.success) {
                 setOrder(response.data.data);
@@ -182,8 +181,9 @@ const OrderDetailsPage = () => {
                 throw new Error(response.data.message || 'Order not found');
             }
         } catch (err) {
-            console.error('❌ Error:', err);
+            console.error('Error:', err);
 
+            // Retry up to 2 times on 401
             if (err.response?.status === 401 && retryCount < 2) {
                 setRetryCount(prev => prev + 1);
                 setTimeout(() => fetchOrderDetails(), 1000);
@@ -197,19 +197,21 @@ const OrderDetailsPage = () => {
         }
     }, [orderNumber, authLoading, checkAuth, retryCount, navigate]);
 
+    // Fetch on mount / when orderNumber changes
     useEffect(() => {
         if (orderNumber) {
             fetchOrderDetails();
         }
     }, [orderNumber, fetchOrderDetails]);
 
+    // Mobile detection on resize
     useEffect(() => {
         const checkMobile = () => setIsMobile(window.innerWidth < 768);
         window.addEventListener("resize", checkMobile);
         return () => window.removeEventListener("resize", checkMobile);
     }, []);
 
-    // Format functions
+    // Format a date string as "dd MMM yyyy"
     const formatDate = (dateString) => {
         try {
             return format(new Date(dateString), 'dd MMM yyyy');
@@ -218,6 +220,7 @@ const OrderDetailsPage = () => {
         }
     };
 
+    // Format a date string as "dd MMM yyyy, hh:mm a"
     const formatDateTime = (dateString) => {
         try {
             return format(new Date(dateString), 'dd MMM yyyy, hh:mm a');
@@ -226,6 +229,7 @@ const OrderDetailsPage = () => {
         }
     };
 
+    // Format a number as Indian Rupee currency
     const formatCurrency = (amount) => {
         return new Intl.NumberFormat('en-IN', {
             style: 'currency',
@@ -235,11 +239,76 @@ const OrderDetailsPage = () => {
         }).format(amount);
     };
 
-    // Generate PDF Invoice - FIXED: Pure HTML string without any CSS gradients
+    // NEW HELPER: Extract return info for an item — original qty, returned qty, net qty, net amount
+    const getItemReturnInfo = (item) => {
+        const originalQty = Number(item.quantity || 0);
+        const returnedQty = Number(item.returned_quantity || 0);
+
+        // net_quantity comes from backend, fallback: original - returned
+        const netQty = Number(
+            item.net_quantity ?? Math.max(0, originalQty - returnedQty)
+        );
+
+        // net_amount comes from backend, fallback: proportional
+        const totalPrice = Number(item.total_price || 0);
+        const perUnit = originalQty > 0 ? totalPrice / originalQty : 0;
+        const netAmount = Number(
+            item.net_amount ?? (perUnit * netQty)
+        );
+
+        const isFullyReturned = originalQty > 0 && returnedQty >= originalQty;
+        const isPartiallyReturned = returnedQty > 0 && returnedQty < originalQty;
+        const hasReturn = returnedQty > 0;
+
+        return {
+            originalQty,
+            returnedQty,
+            netQty,
+            totalPrice,
+            netAmount,
+            returnedAmount: totalPrice - netAmount,
+            isFullyReturned,
+            isPartiallyReturned,
+            hasReturn,
+        };
+    };
+
+    // NEW HELPER: Calculate order-level net totals (subtotal, returned amount, net subtotal)
+    const getOrderReturnTotals = () => {
+        if (!order?.items || order.items.length === 0) {
+            return {
+                originalSubtotal: 0,
+                returnedAmount: 0,
+                netSubtotal: 0,
+                hasAnyReturn: false,
+            };
+        }
+
+        let originalSubtotal = 0;
+        let netSubtotal = 0;
+
+        order.items.forEach(item => {
+            const info = getItemReturnInfo(item);
+            originalSubtotal += info.totalPrice;
+            netSubtotal += info.netAmount;
+        });
+
+        return {
+            originalSubtotal: Number(originalSubtotal.toFixed(2)),
+            returnedAmount: Number((originalSubtotal - netSubtotal).toFixed(2)),
+            netSubtotal: Number(netSubtotal.toFixed(2)),
+            hasAnyReturn: originalSubtotal > netSubtotal,
+        };
+    };
+
+    // Generate printable invoice — opens new window with clean HTML
     const generateInvoice = () => {
         if (!order) return;
 
         const invoiceWindow = window.open('', '_blank');
+
+        // Calculate net totals for invoice display
+        const totals = getOrderReturnTotals();
 
         const invoiceHTML = `
     <html>
@@ -323,6 +392,10 @@ const OrderDetailsPage = () => {
             padding-top:8px;
         }
 
+        .returned-text{
+            color:#dc2626;
+        }
+
         .footer{
             margin-top:40px;
             text-align:center;
@@ -379,22 +452,29 @@ const OrderDetailsPage = () => {
         <tr>
             <th>Item</th>
             <th>Qty</th>
+            <th>Returned</th>
+            <th>Net Qty</th>
             <th>Tax</th>
             <th>Unit Price(Tax Included)</th>
-            <th>Total</th>
+            <th>Net Total</th>
         </tr>
         </thead>
 
         <tbody>
-        ${order.items?.map(item => `
+        ${order.items?.map(item => {
+            const info = getItemReturnInfo(item);
+            return `
             <tr>
                 <td>${item.product_name}</td>
-                <td>${item.quantity}</td>
+                <td>${info.originalQty}</td>
+                <td class="${info.returnedQty > 0 ? 'returned-text' : ''}">${info.returnedQty > 0 ? info.returnedQty : '-'}</td>
+                <td>${info.netQty}</td>
                 <td>${item.tax}%</td>
                 <td>₹${parseFloat(item.unit_price).toFixed(2)}</td>
-                <td>₹${parseFloat(item.total_price).toFixed(2)}</td>
+                <td>₹${info.netAmount.toFixed(2)}</td>
             </tr>
-        `).join('')}
+        `;
+        }).join('')}
 
         </tbody>
     </table>
@@ -404,8 +484,19 @@ const OrderDetailsPage = () => {
 
         <div>
             <span>Subtotal:</span>
-            <span>₹${parseFloat(order.total_amount).toFixed(2)}</span>
+            <span>₹${totals.originalSubtotal.toFixed(2)}</span>
         </div>
+
+        ${totals.hasAnyReturn ? `
+        <div class="returned-text">
+            <span>Returned Amount:</span>
+            <span>-₹${totals.returnedAmount.toFixed(2)}</span>
+        </div>
+        <div>
+            <span><strong>Net Subtotal:</strong></span>
+            <span><strong>₹${totals.netSubtotal.toFixed(2)}</strong></span>
+        </div>
+        ` : ''}
 
         <div>
             <span>Shipping:</span>
@@ -444,6 +535,8 @@ const OrderDetailsPage = () => {
             invoiceWindow.print();
         }, 500);
     };
+
+    // Loading state (auth still resolving)
     if (authLoading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -454,9 +547,13 @@ const OrderDetailsPage = () => {
             </div>
         );
     }
+
+    // Mobile version
     if (isMobile) {
         return <MobileOrderDetailsPage />;
     }
+
+    // Loading state (fetching order)
     if (loading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -468,6 +565,7 @@ const OrderDetailsPage = () => {
         );
     }
 
+    // Error / not found state
     if (error || !order) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -489,13 +587,16 @@ const OrderDetailsPage = () => {
         );
     }
 
+    // Compute order-level net totals once
+    const orderTotals = getOrderReturnTotals();
+
     return (
         <div className="min-h-screen bg-gray-50 py-8">
             <Toaster />
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className=" mx-auto px-4 sm:px-6 lg:px-8">
 
-                {/* Header with back button */}
+                {/* Header with back button and download invoice */}
                 <div className="mb-6 flex items-center justify-between no-print">
                     <button
                         onClick={() => navigate('/orders')}
@@ -506,7 +607,6 @@ const OrderDetailsPage = () => {
                     </button>
 
                     <div className="flex items-center gap-3">
-
                         <button
                             onClick={generateInvoice}
                             disabled={generatingPDF}
@@ -518,10 +618,10 @@ const OrderDetailsPage = () => {
                     </div>
                 </div>
 
-                {/* Main Content */}
+                {/* Main Content Card */}
                 <div className="invoice-container bg-white rounded-2xl shadow-xl overflow-hidden">
 
-                    {/* Header */}
+                    {/* Blue Header */}
                     <div className="bg-blue-600 px-8 py-6 text-white">
                         <div className="flex flex-wrap items-center justify-between">
                             <div>
@@ -549,9 +649,16 @@ const OrderDetailsPage = () => {
                             <HiOutlineTag className="w-4 h-4" />
                             {order.payment_method === 'razorpay' ? 'Razorpay' : 'Cash on Delivery'}
                         </span>
+                        {/* NEW: Return badge if any item has a return */}
+                        {orderTotals.hasAnyReturn && (
+                            <span className="inline-flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 border border-red-200 rounded-full text-sm font-medium">
+                                <FaUndoAlt className="w-4 h-4" />
+                                Return / Refund Applied
+                            </span>
+                        )}
                     </div>
 
-                    {/* Customer Info */}
+                    {/* Customer Info + Shipping Address */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-8 border-b border-gray-200">
                         <div>
                             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -598,7 +705,7 @@ const OrderDetailsPage = () => {
                         </div>
                     </div>
 
-                    {/* Order Items */}
+                    {/* Order Items Table */}
                     <div className="p-8 border-b border-gray-200">
                         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                             <FiShoppingBag className="h-5 w-5 text-blue-600" />
@@ -620,47 +727,91 @@ const OrderDetailsPage = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-200">
-                                        {order.items.map((item) => (
-                                            <tr key={item.id} className="hover:bg-gray-50">
-                                                <td className="px-4 py-4">
-                                                    <div className="flex items-center gap-3">
-                                                        {(item.product_details?.variant_image || item.product_details?.main_image) ? (
-                                                            <img
-                                                                src={`http://localhost:8000/${item.product_details?.variant_image ||
-                                                                    item.product_details?.main_image
-                                                                    }`}
-                                                                alt={item.product_name}
-                                                                className="w-12 h-12 object-cover rounded-lg border border-gray-200"
-                                                                onError={(e) => {
-                                                                    e.target.onerror = null;
-                                                                    e.target.src = 'https://via.placeholder.com/48x48?text=No+Image';
-                                                                }}
-                                                            />
-                                                        ) : (
-                                                            <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                                                                <FiBox className="h-6 w-6 text-gray-400" />
+                                        {order.items.map((item) => {
+                                            const info = getItemReturnInfo(item);
+                                            return (
+                                                <tr key={item.id} className={`hover:bg-gray-50 ${info.hasReturn ? 'bg-red-50/40' : ''}`}>
+                                                    <td className="px-4 py-4">
+                                                        <div className="flex items-center gap-3">
+                                                            {(item.product_details?.variant_image || item.product_details?.main_image) ? (
+                                                                <img
+                                                                    src={`http://localhost:8000/${item.product_details?.variant_image ||
+                                                                        item.product_details?.main_image
+                                                                        }`}
+                                                                    alt={item.product_name}
+                                                                    className="w-12 h-12 object-cover rounded-lg border border-gray-200"
+                                                                    onError={(e) => {
+                                                                        e.target.onerror = null;
+                                                                        e.target.src = 'https://via.placeholder.com/48x48?text=No+Image';
+                                                                    }}
+                                                                />
+                                                            ) : (
+                                                                <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                                                                    <FiBox className="h-6 w-6 text-gray-400" />
+                                                                </div>
+                                                            )}
+                                                            <div>
+                                                                <span className="font-medium text-gray-900 block">{item.product_name}</span>
+                                                                {/* Return label under product name */}
+                                                                {info.hasReturn && (
+                                                                    <span className="inline-flex items-center gap-1 mt-1 text-[11px] font-semibold text-red-600 uppercase">
+                                                                        <FaUndoAlt className="w-3 h-3" />
+                                                                        {info.isFullyReturned
+                                                                            ? 'Refunded'
+                                                                            : `Partially Returned (${info.returnedQty})`
+                                                                        }
+                                                                    </span>
+                                                                )}
                                                             </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-4">
+                                                        <span className="text-sm text-gray-600">{item.vendor_details?.business_name || 'N/A'}</span>
+                                                    </td>
+                                                    <td className="px-4 py-4">
+                                                        <span className="text-sm font-mono text-gray-500">{item.sku}</span>
+                                                    </td>
+                                                    <td className="px-4 py-4">
+                                                        <div className="text-sm text-gray-600">
+                                                            {item.color && <div>Color: {item.color}</div>}
+                                                            {item.size && <div>Size: {item.size}</div>}
+                                                        </div>
+                                                    </td>
+                                                    {/* Qty cell: shows net qty with strikethrough original if returned */}
+                                                    <td className="px-4 py-4 text-right">
+                                                        {info.hasReturn ? (
+                                                            <div className="text-sm">
+                                                                <div className="text-gray-400 line-through">{info.originalQty}</div>
+                                                                <div className="font-semibold text-gray-900">{info.netQty}</div>
+                                                                <div className="text-[11px] text-red-600">
+                                                                    -{info.returnedQty} returned
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <span>{info.originalQty}</span>
                                                         )}
-                                                        <span className="font-medium text-gray-900">{item.product_name}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-4">
-                                                    <span className="text-sm text-gray-600">{item.vendor_details?.business_name || 'N/A'}</span>
-                                                </td>
-                                                <td className="px-4 py-4">
-                                                    <span className="text-sm font-mono text-gray-500">{item.sku}</span>
-                                                </td>
-                                                <td className="px-4 py-4">
-                                                    <div className="text-sm text-gray-600">
-                                                        {item.color && <div>Color: {item.color}</div>}
-                                                        {item.size && <div>Size: {item.size}</div>}
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-4 text-right">{item.quantity}</td>
-                                                <td className="px-4 py-4 text-right">{formatCurrency(item.unit_price)}</td>
-                                                <td className="px-4 py-4 text-right font-medium text-blue-600">{formatCurrency(item.total_price)}</td>
-                                            </tr>
-                                        ))}
+                                                    </td>
+                                                    <td className="px-4 py-4 text-right">{formatCurrency(item.unit_price)}</td>
+                                                    {/* Total cell: shows net amount in red if returned */}
+                                                    <td className="px-4 py-4 text-right">
+                                                        {info.hasReturn ? (
+                                                            <div className="text-sm">
+                                                                <div className="text-gray-400 line-through text-xs">
+                                                                    {formatCurrency(info.totalPrice)}
+                                                                </div>
+                                                                <div className="font-semibold text-red-600">
+                                                                    {formatCurrency(info.netAmount)}
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <span className="font-medium text-blue-600">
+                                                                {formatCurrency(info.totalPrice)}
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>
@@ -672,7 +823,7 @@ const OrderDetailsPage = () => {
                         )}
                     </div>
 
-                    {/* Payment & Summary */}
+                    {/* Payment Details + Price Summary */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-8 border-b border-gray-200">
                         <div>
                             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -703,39 +854,72 @@ const OrderDetailsPage = () => {
                                 Price Summary
                             </h3>
                             <div className="bg-gray-50 p-4 rounded-lg space-y-2 text-sm">
+                                {/* Original subtotal */}
                                 <div className="flex justify-between">
                                     <span>Subtotal:</span>
-                                    <span className="font-medium">{formatCurrency(order.total_amount)}</span>
+                                    <span className="font-medium">{formatCurrency(orderTotals.originalSubtotal || order.total_amount)}</span>
                                 </div>
+
+                                {/* Returned amount + Net subtotal — only if any return exists */}
+                                {orderTotals.hasAnyReturn && (
+                                    <>
+                                        <div className="flex justify-between text-red-600">
+                                            <span className="inline-flex items-center gap-1">
+                                                <FaUndoAlt className="w-3 h-3" />
+                                                Returned Amount:
+                                            </span>
+                                            <span className="font-medium">-{formatCurrency(orderTotals.returnedAmount)}</span>
+                                        </div>
+                                        <div className="flex justify-between border-t border-dashed border-gray-300 pt-2">
+                                            <span className="font-medium">Net Subtotal:</span>
+                                            <span className="font-semibold text-gray-900">{formatCurrency(orderTotals.netSubtotal)}</span>
+                                        </div>
+                                    </>
+                                )}
+
+                                {/* Shipping */}
                                 <div className="flex justify-between">
                                     <span>Shipping:</span>
                                     <span className={order.shipping_charge > 0 ? 'font-medium' : 'text-green-600'}>
                                         {order.shipping_charge > 0 ? formatCurrency(order.shipping_charge) : 'Free'}
                                     </span>
                                 </div>
+
+                                {/* Discount */}
                                 {order.discount_amount > 0 && (
                                     <div className="flex justify-between text-green-600">
                                         <span>Discount:</span>
                                         <span>-{formatCurrency(order.discount_amount)}</span>
                                     </div>
                                 )}
+
+                                {/* Final total */}
                                 <div className="border-t border-gray-200 pt-2 mt-2">
                                     <div className="flex justify-between font-bold">
                                         <span>Total:</span>
                                         <span className="text-blue-600">{formatCurrency(order.final_amount)}</span>
                                     </div>
                                 </div>
+
+                                {/* Loyalty points earned */}
                                 {order.loyalty_points_earned > 0 && (
                                     <div className="flex justify-between text-xs text-green-600 mt-2">
-                                        <span>✨ Points Earned:</span>
+                                        <span>Points Earned:</span>
                                         <span>+{order.loyalty_points_earned}</span>
+                                    </div>
+                                )}
+
+                                {/* Footnote when returns exist */}
+                                {orderTotals.hasAnyReturn && (
+                                    <div className="mt-3 pt-3 border-t border-gray-200 text-[11px] text-gray-500 italic">
+                                        * Returned items amount has been adjusted in the subtotal.
                                     </div>
                                 )}
                             </div>
                         </div>
                     </div>
 
-                    {/* Notes */}
+                    {/* Order Notes */}
                     {order.notes && (
                         <div className="p-8 bg-blue-50 border-b border-gray-200">
                             <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">

@@ -560,7 +560,7 @@ const FlashDealListPage = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-50 py-8 px-4">
-        <div className="max-w-7xl mx-auto">
+        <div className="mx-auto">
           <div className="animate-pulse">
             <div className="h-64 bg-white rounded-2xl shadow-xl mb-8"></div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -578,7 +578,7 @@ const FlashDealListPage = () => {
   if (!flashDeal && products.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-50 py-8 px-4">
-        <div className="max-w-7xl mx-auto text-center py-16">
+        <div className="mx-auto text-center py-16">
           <h2 className="text-3xl font-bold text-gray-800 mb-2">No Active Flash Deals</h2>
           <p className="text-gray-600 mb-6">Check back later for exciting flash sales!</p>
           <Link to="/" className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
@@ -628,7 +628,7 @@ const FlashDealListPage = () => {
         title="Flash Deal Filters"
       />
 
-      <div className="max-w-7xl mx-auto">
+      <div className=" mx-auto">
         {/* FANCY FLASH DEAL COUNTDOWN HEADER */}
         <div className="relative mb-12 overflow-hidden rounded-3xl bg-gradient-to-r from-red-600 via-orange-500 to-yellow-500 shadow-2xl">
           {/* Lightning Effects */}

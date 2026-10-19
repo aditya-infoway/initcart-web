@@ -4,7 +4,7 @@ import { publicAxios, axiosInstance } from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { Tag, Zap, ChevronRight, ShoppingCart } from 'lucide-react';
-import RelatedProductSlider from '../RelatedProducts';
+import MobileRelatedProducts from './MobileRelatedProducts';
 import { FaShoppingCart, FaStar, FaShieldAlt, FaBox, FaCoins, FaClock, FaChevronLeft, FaCheckCircle, FaTruck } from 'react-icons/fa';
 import { GiReturnArrow } from 'react-icons/gi';
 import { FiChevronLeft, FiLock } from 'react-icons/fi';
@@ -974,7 +974,8 @@ export default function MobileProductDetail() {
       {/* ── RELATED PRODUCTS ───────────────────────────────────────────── */}
       <div style={{ marginTop: 8, background: C.surface, padding: '14px 0' }}>
         <div style={{ ...F.sectionLetter, color: C.textMid, padding: '0 14px', marginBottom: 10 }}>You May Also Like</div>
-        <RelatedProductSlider />
+        {/* 🔥 Yaha naya Mobile component use karein */}
+        <MobileRelatedProducts product={product} />
       </div>
 
       {/* ══════════════════════════════════════════════════════════════════

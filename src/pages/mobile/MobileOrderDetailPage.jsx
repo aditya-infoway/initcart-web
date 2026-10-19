@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import axiosInstance from '../../api/axios';
 import { format } from 'date-fns';
 import { toast } from 'react-hot-toast';
+import { FaUndoAlt } from 'react-icons/fa';
 
 // Icons
 import {
@@ -29,7 +30,8 @@ import {
   FiGift,
   FiShield,
   FiPackage,
-  FiHome
+  FiHome,
+  FiRefreshCw
 } from 'react-icons/fi';
 
 // ─── Font Tokens (Same as other mobile pages) ──────────────────────────────
@@ -167,11 +169,61 @@ const MobileOrderDetailsPage = () => {
     return `http://localhost:8000/${imagePath}`;
   };
 
+  // NEW HELPER: Extract return info for an item
+  const getItemReturnInfo = (item) => {
+    const originalQty = Number(item.quantity || 0);
+    const returnedQty = Number(item.returned_quantity || 0);
+    const netQty = Number(item.net_quantity ?? Math.max(0, originalQty - returnedQty));
+    
+    const totalPrice = Number(item.total_price || 0);
+    const perUnit = originalQty > 0 ? totalPrice / originalQty : 0;
+    const netAmount = Number(item.net_amount ?? (perUnit * netQty));
+
+    const isFullyReturned = originalQty > 0 && returnedQty >= originalQty;
+    const isPartiallyReturned = returnedQty > 0 && returnedQty < originalQty;
+    const hasReturn = returnedQty > 0;
+
+    return {
+      originalQty,
+      returnedQty,
+      netQty,
+      totalPrice,
+      netAmount,
+      returnedAmount: totalPrice - netAmount,
+      isFullyReturned,
+      isPartiallyReturned,
+      hasReturn,
+    };
+  };
+
+  // NEW HELPER: Calculate order-level net totals
+  const getOrderReturnTotals = () => {
+    if (!order?.items || order.items.length === 0) {
+      return { originalSubtotal: 0, returnedAmount: 0, netSubtotal: 0, hasAnyReturn: false };
+    }
+    let originalSubtotal = 0;
+    let netSubtotal = 0;
+    order.items.forEach(item => {
+      const info = getItemReturnInfo(item);
+      originalSubtotal += info.totalPrice;
+      netSubtotal += info.netAmount;
+    });
+    return {
+      originalSubtotal: Number(originalSubtotal.toFixed(2)),
+      returnedAmount: Number((originalSubtotal - netSubtotal).toFixed(2)),
+      netSubtotal: Number(netSubtotal.toFixed(2)),
+      hasAnyReturn: originalSubtotal > netSubtotal,
+    };
+  };
+
   const generateInvoice = () => {
     if (!order) return;
     setGeneratingPDF(true);
-    
+
+    const totals = getOrderReturnTotals();
     const invoiceWindow = window.open('', '_blank');
+    
+    // Invoice HTML with Return Details (same as website)
     const invoiceHTML = `
       <html>
       <head><title>Invoice - ${order.order_number}</title>
@@ -189,6 +241,7 @@ const MobileOrderDetailsPage = () => {
         .totals { width: 350px; margin-top: 20px; margin-left: auto; }
         .totals div { display: flex; justify-content: space-between; padding: 6px 0; }
         .grand-total { font-weight: bold; border-top: 2px solid #000; padding-top: 8px; }
+        .returned-text { color: #dc2626; }
         .footer { margin-top: 40px; text-align: center; font-size: 12px; color: #666; }
       </style>
       </head>
@@ -202,16 +255,36 @@ const MobileOrderDetailsPage = () => {
           <div class="address-box"><h3>Shipping Address</h3><p><strong>${order.shipping_name || order.billing_name}</strong></p><p>${order.shipping_address || order.billing_address}</p><p>${order.shipping_city || order.billing_city}, ${order.shipping_state || order.billing_state} - ${order.shipping_pincode || order.billing_pincode}</p><p>Phone: ${order.shipping_phone || order.billing_phone}</p></div>
         </div>
         <h3>Order Items</h3>
-        <table><thead><tr><th>Item</th><th>Qty</th><th>Unit Price</th><th>Total</th></tr></thead><tbody>
-        ${order.items?.map(item => `<tr><td>${item.product_name}</td><td>${item.quantity}</td><td>${formatCurrency(item.unit_price)}</td><td>${formatCurrency(item.total_price)}</td></tr>`).join('')}
-        </tbody></table>
+        <table>
+          <thead>
+            <tr><th>Item</th><th>Qty</th><th>Returned</th><th>Net Qty</th><th>Tax</th><th>Unit Price(Tax Included)</th><th>Net Total</th></tr>
+          </thead>
+          <tbody>
+            ${order.items?.map(item => {
+              const info = getItemReturnInfo(item);
+              return `<tr>
+                <td>${item.product_name}</td>
+                <td>${info.originalQty}</td>
+                <td class="${info.returnedQty > 0 ? 'returned-text' : ''}">${info.returnedQty > 0 ? info.returnedQty : '-'}</td>
+                <td>${info.netQty}</td>
+                <td>${item.tax || 0}%</td>
+                <td>₹${parseFloat(item.unit_price).toFixed(2)}</td>
+                <td>₹${info.netAmount.toFixed(2)}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
         <div class="totals">
-          <div><span>Subtotal:</span><span>${formatCurrency(order.total_amount)}</span></div>
-          <div><span>Shipping:</span><span>${order.shipping_charge == 0 ? 'FREE' : formatCurrency(order.shipping_charge)}</span></div>
-          ${order.discount_amount > 0 ? `<div><span>Discount:</span><span>-${formatCurrency(order.discount_amount)}</span></div>` : ''}
-          <div class="grand-total"><span>Total:</span><span>${formatCurrency(order.final_amount)}</span></div>
+          <div><span>Subtotal:</span><span>₹${totals.originalSubtotal.toFixed(2)}</span></div>
+          ${totals.hasAnyReturn ? `
+          <div class="returned-text"><span>Returned Amount:</span><span>-₹${totals.returnedAmount.toFixed(2)}</span></div>
+          <div><span><strong>Net Subtotal:</strong></span><span><strong>₹${totals.netSubtotal.toFixed(2)}</strong></span></div>
+          ` : ''}
+          <div><span>Shipping:</span><span>${order.shipping_charge == 0 ? 'FREE' : `₹${parseFloat(order.shipping_charge).toFixed(2)}`}</span></div>
+          ${order.discount_amount > 0 ? `<div><span>Discount:</span><span>-₹${parseFloat(order.discount_amount).toFixed(2)}</span></div>` : ''}
+          <div class="grand-total"><span>Total:</span><span>₹${parseFloat(order.final_amount).toFixed(2)}</span></div>
         </div>
-        <div class="footer"><p>Thank you for shopping with InitCart!</p></div>
+        <div class="footer"><p>This is a computer generated invoice.</p><p>Thank you for shopping with InitCart!</p></div>
       </body>
       </html>
     `;
@@ -251,6 +324,8 @@ const MobileOrderDetailsPage = () => {
       </div>
     );
   }
+
+  const orderTotals = getOrderReturnTotals();
 
   return (
     <div style={{ minHeight: '100dvh', background: '#F8FAFC', paddingBottom: 30 }}>
@@ -294,6 +369,12 @@ const MobileOrderDetailsPage = () => {
             <span style={{ padding: '4px 10px', borderRadius: 20, fontSize: 10, fontWeight: 600, background: paymentStatusConfig[order.payment_status] === '#10B981' ? '#ECFDF5' : '#FEF2F2', color: paymentStatusConfig[order.payment_status], display: 'flex', alignItems: 'center', gap: 4 }}>
               Payment: {order.payment_status}
             </span>
+            {/* NEW: Return Applied Badge */}
+            {orderTotals.hasAnyReturn && (
+              <span style={{ padding: '4px 10px', borderRadius: 20, fontSize: 10, fontWeight: 600, background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <FaUndoAlt size={10} /> Return / Refund Applied
+              </span>
+            )}
           </div>
         </div>
 
@@ -371,37 +452,67 @@ const MobileOrderDetailsPage = () => {
           </div>
         </div>
 
-        {/* Order Items */}
+        {/* Order Items with Return Details */}
         <div style={{ background: '#FFFFFF', borderRadius: 16, marginBottom: 12, border: '1px solid #E2E8F0', overflow: 'hidden' }}>
           <div style={{ padding: '14px 16px', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: 8 }}>
             <FiShoppingBag size={16} color="#2563EB" />
             <span style={{ ...F.cardTitle }}>Order Items ({order.items?.length || 0})</span>
           </div>
           <div style={{ padding: '12px' }}>
-            {order.items?.map((item, idx) => (
-              <div key={item.id} style={{ marginBottom: idx !== order.items.length - 1 ? 12 : 0, paddingBottom: idx !== order.items.length - 1 ? 12 : 0, borderBottom: idx !== order.items.length - 1 ? '1px solid #E2E8F0' : 'none' }}>
-                <div style={{ display: 'flex', gap: 12 }}>
-                  <img src={getItemImage(item) || "https://placehold.co/60x60/f0f4f8/94a3b8?text=No+Image"} alt="" style={{ width: 60, height: 60, borderRadius: 10, objectFit: 'cover', background: '#F1F5F9' }} />
-                  <div style={{ flex: 1 }}>
-                    <p style={{ ...F.cardSub, fontWeight: 600 }}>{item.product_name}</p>
-                    <p style={{ ...F.badge, color: '#64748B' }}>Vendor: {item.vendor_details?.business_name || 'N/A'}</p>
-                    {item.color && <p style={{ ...F.badge, color: '#64748B' }}>Color: {item.color}</p>}
-                    {item.size && <p style={{ ...F.badge, color: '#64748B' }}>Size: {item.size}</p>}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-                      <div>
-                        <p style={{ ...F.badge, color: '#64748B' }}>Qty: {item.quantity}</p>
-                        <p style={{ ...F.statNum, color: '#64748B' }}>Unit: {formatCurrency(item.unit_price)}</p>
+            {order.items?.map((item, idx) => {
+              const info = getItemReturnInfo(item);
+              return (
+                <div key={item.id} style={{ marginBottom: idx !== order.items.length - 1 ? 12 : 0, paddingBottom: idx !== order.items.length - 1 ? 12 : 0, borderBottom: idx !== order.items.length - 1 ? '1px solid #E2E8F0' : 'none', background: info.hasReturn ? '#FEF2F2' : 'transparent', padding: info.hasReturn ? '8px' : '0', borderRadius: info.hasReturn ? '8px' : '0' }}>
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <img src={getItemImage(item) || "https://placehold.co/60x60/f0f4f8/94a3b8?text=No+Image"} alt="" style={{ width: 60, height: 60, borderRadius: 10, objectFit: 'cover', background: '#F1F5F9', border: info.hasReturn ? '2px solid #FCA5A5' : '1px solid #E2E8F0' }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <p style={{ ...F.cardSub, fontWeight: 600 }}>{item.product_name}</p>
+                        {/* Return Badge */}
+                        {info.hasReturn && (
+                          <span style={{ ...F.badge, color: '#DC2626', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <FaUndoAlt size={8} />
+                            {info.isFullyReturned ? 'Refunded' : `Partial (${info.returnedQty})`}
+                          </span>
+                        )}
                       </div>
-                      <p style={{ ...F.statNum, color: '#2563EB' }}>{formatCurrency(item.total_price)}</p>
+                      <p style={{ ...F.badge, color: '#64748B' }}>Vendor: {item.vendor_details?.business_name || 'N/A'}</p>
+                      {item.color && <p style={{ ...F.badge, color: '#64748B' }}>Color: {item.color}</p>}
+                      {item.size && <p style={{ ...F.badge, color: '#64748B' }}>Size: {item.size}</p>}
+                      
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                        <div>
+                          {info.hasReturn ? (
+                            <div>
+                              <p style={{ ...F.badge, color: '#64748B', textDecoration: 'line-through' }}>Qty: {info.originalQty}</p>
+                              <p style={{ ...F.badge, color: '#DC2626', fontWeight: 600 }}>Net Qty: {info.netQty}</p>
+                              <p style={{ ...F.badge, color: '#64748B' }}>Unit: {formatCurrency(item.unit_price)}</p>
+                            </div>
+                          ) : (
+                            <div>
+                              <p style={{ ...F.badge, color: '#64748B' }}>Qty: {info.originalQty}</p>
+                              <p style={{ ...F.badge, color: '#64748B' }}>Unit: {formatCurrency(item.unit_price)}</p>
+                            </div>
+                          )}
+                        </div>
+                        {info.hasReturn ? (
+                          <div style={{ textAlign: 'right' }}>
+                            <p style={{ ...F.badge, color: '#94A3B8', textDecoration: 'line-through' }}>{formatCurrency(info.totalPrice)}</p>
+                            <p style={{ ...F.statNum, color: '#DC2626' }}>{formatCurrency(info.netAmount)}</p>
+                          </div>
+                        ) : (
+                          <p style={{ ...F.statNum, color: '#2563EB' }}>{formatCurrency(info.totalPrice)}</p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
-        {/* Payment Summary */}
+        {/* Payment Summary with Return Details */}
         <div style={{ background: '#FFFFFF', borderRadius: 16, marginBottom: 12, border: '1px solid #E2E8F0', overflow: 'hidden' }}>
           <div style={{ padding: '14px 16px', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: 8 }}>
             <FiCreditCard size={16} color="#8B5CF6" />
@@ -410,8 +521,25 @@ const MobileOrderDetailsPage = () => {
           <div style={{ padding: '12px 16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
               <span style={{ ...F.badge, color: '#64748B' }}>Subtotal</span>
-              <span style={{ ...F.statNum }}>{formatCurrency(order.total_amount)}</span>
+              <span style={{ ...F.statNum }}>{formatCurrency(orderTotals.originalSubtotal || order.total_amount)}</span>
             </div>
+
+            {/* Return Summary */}
+            {orderTotals.hasAnyReturn && (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span style={{ ...F.badge, color: '#DC2626', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <FaUndoAlt size={10} /> Returned Amount
+                  </span>
+                  <span style={{ ...F.statNum, color: '#DC2626' }}>-{formatCurrency(orderTotals.returnedAmount)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, paddingBottom: 8, borderBottom: '1px dashed #E2E8F0' }}>
+                  <span style={{ ...F.badge, color: '#1E293B', fontWeight: 600 }}>Net Subtotal</span>
+                  <span style={{ ...F.statNum, color: '#1E293B' }}>{formatCurrency(orderTotals.netSubtotal)}</span>
+                </div>
+              </>
+            )}
+
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
               <span style={{ ...F.badge, color: '#64748B' }}>Shipping</span>
               <span style={{ ...F.statNum, color: order.shipping_charge == 0 ? '#10B981' : '#64748B' }}>{order.shipping_charge == 0 ? 'FREE' : formatCurrency(order.shipping_charge)}</span>
@@ -434,6 +562,11 @@ const MobileOrderDetailsPage = () => {
                   <span style={{ ...F.badge, color: '#10B981' }}>✨ Points Earned</span>
                   <span style={{ ...F.statNum, color: '#10B981' }}>+{order.loyalty_points_earned}</span>
                 </div>
+              </div>
+            )}
+            {orderTotals.hasAnyReturn && (
+              <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid #E2E8F0' }}>
+                <p style={{ ...F.badge, color: '#64748B', fontStyle: 'italic' }}>* Returned items amount has been adjusted in the subtotal.</p>
               </div>
             )}
           </div>
