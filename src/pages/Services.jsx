@@ -45,17 +45,17 @@ function svgPlaceholder(title, size = 200) {
 
 export default function ServiceSegmentSlider() {
   const navigate = useNavigate();
-  const [itemsPerView, setItemsPerView] = useState(6);
+  const [itemsPerView, setItemsPerView] = useState(4);
   const [start, setStart] = useState(0);
   const [hoveredId, setHoveredId] = useState(null);
 
   useEffect(() => {
     const setFromWidth = () => {
       const w = window.innerWidth;
-      if (w >= 1280) setItemsPerView(8);
-      else if (w >= 1024) setItemsPerView(6);
-      else if (w >= 768) setItemsPerView(3);
-      else setItemsPerView(3);
+      if (w >= 1280) setItemsPerView(4);
+      else if (w >= 1024) setItemsPerView(3);
+      else if (w >= 768) setItemsPerView(2);
+      else setItemsPerView(1);
     };
     setFromWidth();
     window.addEventListener("resize", setFromWidth);
@@ -75,14 +75,13 @@ export default function ServiceSegmentSlider() {
   const prev = () => setStart((s) => (s - 1 + services.length) % services.length);
   const next = () => setStart((s) => (s + 1) % services.length);
 
-  // Auto-slide every 8 seconds
   useEffect(() => {
     const id = setInterval(() => setStart((s) => (s + 1) % services.length), 8000);
     return () => clearInterval(id);
   }, []);
 
   const getUnsplashUrl = (keyword) =>
-    `https://source.unsplash.com/featured/300x300/?${encodeURIComponent(keyword)}`;
+    `https://source.unsplash.com/featured/600x400/?${encodeURIComponent(keyword)}`;
 
   return (
     <section className="mt-10 overflow-hidden">
@@ -93,78 +92,73 @@ export default function ServiceSegmentSlider() {
           onClick={() => navigate("/servicelistpage")}
           className="text-sm text-blue-600 transition-colors"
         >
-          View all
+          VIEW ALL
         </button>
       </div>
 
       {/* Slider */}
       <div className="relative w-full overflow-hidden px-4 sm:px-4 group/slider">
         <div
-          className="grid transition-all duration-500 ease-out gap-3 justify-center"
+          className="grid transition-all duration-500 ease-out gap-4"
           style={{
-            gridTemplateColumns: `repeat(${itemsPerView}, auto)`,
+            gridTemplateColumns: `repeat(${itemsPerView}, minmax(0, 1fr))`,
           }}
         >
           {visible.map((s) => (
             <div
               key={s.id}
-              className="group/card cursor-pointer"
+              className="group/card cursor-pointer relative"
               onClick={() => navigate(s.path)}
               onMouseEnter={() => setHoveredId(s.id)}
               onMouseLeave={() => setHoveredId(null)}
             >
-              {/* Image Container - Minimal design */}
-              <div className="relative mx-auto h-24 w-24 md:h-32 md:w-32 rounded-full bg-white border border-gray-200 flex items-center justify-center transition-all duration-300 group-hover/card:border-gray-400">
+              {/* Image Card - Rectangular */}
+              <div className="relative w-full h-48 md:h-56 rounded-2xl overflow-hidden shadow-md bg-gray-100">
                 <img
                   src={s.img || getUnsplashUrl(s.keyword)}
                   alt={s.title}
                   loading="lazy"
                   decoding="async"
                   referrerPolicy="no-referrer"
-                  className="h-4/5 w-4/5 object-cover rounded-full transition-all duration-500 group-hover/card:scale-105"
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover/card:scale-110"
                   onError={(e) => {
                     e.currentTarget.onerror = null;
                     e.currentTarget.src = getUnsplashUrl(s.keyword);
                     setTimeout(() => {
                       if (!e.currentTarget.complete || e.currentTarget.naturalWidth === 0) {
-                        e.currentTarget.src = `https://picsum.photos/seed/service-${s.id}/300/300`;
+                        e.currentTarget.src = `https://picsum.photos/seed/service-${s.id}/600/400`;
                       }
                     }, 2000);
                     setTimeout(() => {
                       if (!e.currentTarget.complete || e.currentTarget.naturalWidth === 0) {
-                        e.currentTarget.src = svgPlaceholder(s.title, 300);
+                        e.currentTarget.src = svgPlaceholder(s.title, 600);
                       }
                     }, 4000);
                   }}
                 />
 
-                {/* Subtle hover indicator */}
-                <span className={`absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full transition-all duration-300 ${hoveredId === s.id ? 'bg-gray-400 scale-100' : 'bg-transparent scale-0'
-                  }`} />
-              </div>
+                {/* Dark Overlay on Hover */}
+                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300" />
 
-              {/* Title - Minimal */}
-              <div className="mt-3 text-sm font-normal text-gray-600 text-center truncate mx-auto group-hover/card:text-gray-900 transition-colors">
-                {s.title}
-              </div>
-
-              {/* Inquiry Button - Minimal, appears on hover */}
-              <div className="flex justify-center mt-2 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300">
-                <button
-                  className="px-3 py-1 text-xs bg-blue-600 text-white rounded-sm hover:bg-blue-800 transition-colors"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(s.path);
-                  }}
-                >
-                  Explore
-                </button>
+                {/* Arrow Button (bottom-left) */}
+                <div className="absolute bottom-3 left-3 w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-md opacity-0 group-hover/card:opacity-100 transition-all duration-300">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    strokeWidth="2"
+                    stroke="currentColor"
+                    className="h-4 w-4 text-gray-800"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25" />
+                  </svg>
+                </div>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Navigation Arrows - Minimal, appear on hover */}
+        {/* Navigation Arrows */}
         <button
           onClick={prev}
           aria-label="Previous"
@@ -198,19 +192,6 @@ export default function ServiceSegmentSlider() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
           </svg>
         </button>
-
-        {/* Minimal Progress Dots */}
-        <div className="flex justify-center gap-1.5 mt-6">
-          {services.map((_, idx) => (
-            <button
-              key={idx}
-              onClick={() => setStart(idx)}
-              className={`h-1 rounded-full transition-all duration-300 ${idx === start ? 'w-4 bg-gray-600' : 'w-1 bg-gray-300'
-                }`}
-              aria-label={`Go to slide ${idx + 1}`}
-            />
-          ))}
-        </div>
       </div>
     </section>
   );

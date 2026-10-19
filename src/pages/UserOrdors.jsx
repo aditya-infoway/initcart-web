@@ -8,6 +8,7 @@ import { toast, Toaster } from 'react-hot-toast';
 import MobileOrdersPage from './mobile/MobileOrderPage';
 import ProductReviewWidget from './Productreviewwidget';
 import ReturnRequestModal from './ReturnRequestModal';
+import { orderGet } from '../api/orderApi';
 
 // Icons
 import {
@@ -137,30 +138,25 @@ const OrdersPage = () => {
         setError(null);
 
         try {
-            const response = await axiosInstance.get('/api/public/orders/');
+            const response= await orderGet('/api/public/orders/');
             if (response.data.success) {
                 setOrders(response.data.data);
                 setRetryCount(0);
             } else {
                 throw new Error(response.data.message || 'Failed to fetch orders');
             }
-        } catch (err) {
-            console.error('❌ Error:', err);
-            if (err.response?.status === 401 && retryCount < 2) {
-                setRetryCount(prev => prev + 1);
-                setTimeout(() => fetchOrders(), 1000);
-                return;
-            }
-            setError(err.response?.data?.message || 'Failed to load orders');
-            toast.error('Failed to load orders');
-        } finally {
-            setLoading(false);
-        }
-    }, [authLoading, checkAuth, navigate, retryCount]);
+} catch (err) {
+    console.error('❌ Error:', err);
+    setError(err.response?.data?.message || 'Failed to load orders');
+    toast.error('Failed to load orders');
+} finally {
+    setLoading(false);
+}
+}, [authLoading, checkAuth, navigate]); 
 
     const fetchReturnRequests = useCallback(async () => {
         try {
-            const res = await axiosInstance.get('/api/ecommerce/public/returns/');
+            const res= await orderGet('/api/ecommerce/public/returns/');
             if (res.data.success) {
                 const map = {};
                 res.data.data.forEach(rr => {
@@ -341,7 +337,7 @@ const OrdersPage = () => {
         <div className="min-h-screen bg-gray-50 py-3">
             <Toaster />
 
-            <div className="max-w-7xl mx-auto px-4 lg:px-8">
+            <div className="mmx-auto px-4 lg:px-8">
 
                 {/* Compact Header */}
                 <div className="mb-3 bg-white rounded-lg shadow-sm px-4 py-3">
@@ -537,11 +533,42 @@ const OrdersPage = () => {
                                                 {order.items && order.items.length > 0 ? (
                                                     order.items.map((item) => {
                                                         const returnReq = returnMap[item.id];
-                                                        const returnMeta = returnReq ? getReturnStatusMeta(returnReq.status) : null;
-                                                        const itemStatusBadge = getStatusIconBadge(item.item_status);
+                                                        const returnMeta = returnReq
+                                                            ? getReturnStatusMeta(returnReq.status)
+                                                            : null;
+                                                        const itemStatusBadge = getStatusIconBadge(item.item_status);    
+
+                                                        // RETURN QUANTITY
+                                                        const returnedQuantity = Number(item.returned_quantity || 0);
+                                                        const originalQuantity = Number(item.quantity || 0);
+
+                                                        // REMAINING QUANTITY
+                                                        const remainingQuantity = Number(
+                                                            item.net_quantity ?? (originalQuantity - returnedQuantity)
+                                                        );
+
+                                                        // REMAINING AMOUNT
+                                                        const remainingAmount = Number(
+                                                            item.net_amount ?? item.total_price ?? 0
+                                                        );
+
+                                                        // FULL / PARTIAL RETURN
+                                                        const isFullyReturned =
+                                                            originalQuantity > 0 &&
+                                                            returnedQuantity >= originalQuantity;
+
+                                                        const isPartiallyReturned =
+                                                            returnedQuantity > 0 &&
+                                                            returnedQuantity < originalQuantity;
 
                                                         const isReturnActive = !!returnReq;
-                                                        const isRefunded = item.item_status === 'refunded' || returnReq?.status === 'refunded' || returnReq?.status === 'completed';
+
+                                                        // Only full quantity should show as refunded
+                                                        const isRefunded =
+                                                            isFullyReturned ||
+                                                            returnReq?.status === 'refunded' ||
+                                                            returnReq?.status === 'completed';
+
                                                         const showRedCard = isReturnActive || isRefunded;
 
                                                         return (
@@ -575,7 +602,12 @@ const OrdersPage = () => {
                                                                         <div className="flex items-center gap-1.5 mb-1">
                                                                             <FaUndoAlt className="w-3 h-3 text-red-600" />
                                                                             <span className="text-[11px] font-bold tracking-wide text-red-600 uppercase">
-                                                                                {isRefunded ? 'Refunded' : 'Return / Refund'}
+                                                                                {isFullyReturned
+                                                                                    ? 'Refunded'
+                                                                                    : isPartiallyReturned
+                                                                                        ? `Partially Returned (${returnedQuantity})`
+                                                                                        : 'Return / Refund'
+                                                                                }
                                                                             </span>
                                                                         </div>
                                                                     )}
@@ -592,7 +624,7 @@ const OrdersPage = () => {
                                                                         </div>
                                                                         <div className="text-right flex-shrink-0">
                                                                             <p className={`text-sm font-semibold ${showRedCard ? 'text-red-600' : 'text-blue-600'}`}>
-                                                                                {formatCurrency(item.total_price)}
+                                                                                {formatCurrency(remainingAmount)}
                                                                             </p>
                                                                             <p className="text-[11px] text-gray-400">
                                                                                 {formatCurrency(item.unit_price)} each
@@ -616,7 +648,7 @@ const OrdersPage = () => {
                                                                             </span>
                                                                         )}
                                                                         <span className="text-[11px] bg-gray-100 px-1.5 py-0.5 rounded text-gray-600">
-                                                                            Qty: {item.quantity}
+                                                                            Qty: {remainingQuantity}
                                                                         </span>
                                                                         <span
                                                                             title={itemStatusBadge.title}
@@ -750,6 +782,7 @@ const OrdersPage = () => {
                 {returnModalOpen && activeReturnItem && (
                     <ReturnRequestModal
                         item={activeReturnItem.item}
+                        order={activeReturnItem.order} 
                         onClose={() => setReturnModalOpen(false)}
                         onSuccess={() => {
                             setReturnModalOpen(false);

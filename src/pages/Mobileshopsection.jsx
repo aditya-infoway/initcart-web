@@ -18,24 +18,26 @@ import MobileFlashDeals from './MobileFlashDeal';
 import MobileTopSellers from './MobileTopSallers';
 import MobileHomeSliders from './MobileHomeSliders';
 
-// Bold Vertical Gradients
-const getBoldVerticalGradient = (color) => {
-  return `linear-gradient(180deg, ${color}08 0%, ${color}20 30%, ${color}35 70%, ${color}45 100%)`
+// ================= OVERLAY COLOUR HELPERS (website SubCategorySlider jaisa) =================
+const hexToRgb = (hex) => {
+  const h = /^#[0-9a-fA-F]{6}$/.test(hex) ? hex : '#000000'
+  return {
+    r: parseInt(h.slice(1, 3), 16),
+    g: parseInt(h.slice(3, 5), 16),
+    b: parseInt(h.slice(5, 7), 16),
+  }
 }
 
-// Bold Card Color Palettes
-const CARD_PALETTES = [
-  { color: '#1565C0', borderColor: '#1976D2', lightColor: '#42A5F5', name: 'Blue' },
-  { color: '#E65100', borderColor: '#EF6C00', lightColor: '#FF9800', name: 'Orange' },
-  { color: '#2E7D32', borderColor: '#388E3C', lightColor: '#66BB6A', name: 'Green' },
-  { color: '#C62828', borderColor: '#D32F2F', lightColor: '#EF5350', name: 'Red' },
-  { color: '#4527A0', borderColor: '#5E35B1', lightColor: '#7E57C2', name: 'Purple' },
-  { color: '#00695C', borderColor: '#00897B', lightColor: '#4DB6AC', name: 'Teal' },
-  { color: '#F57F17', borderColor: '#F9A825', lightColor: '#FFD54F', name: 'Amber' },
-  { color: '#6A1B9A', borderColor: '#8E24AA', lightColor: '#AB47BC', name: 'Lavender' },
-]
+// Colour halka ho to text kala, gehra ho to text safed
+const textColorFor = (hex) => {
+  const { r, g, b } = hexToRgb(hex)
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6 ? '#111111' : '#ffffff'
+}
 
-const getPalette = (idx) => CARD_PALETTES[idx % CARD_PALETTES.length]
+const overlayGradient = (hex) => {
+  const { r, g, b } = hexToRgb(hex)
+  return `linear-gradient(to bottom, rgba(${r},${g},${b},0.92) 0%, rgba(${r},${g},${b},0.65) 45%, rgba(${r},${g},${b},0) 100%)`
+}
 
 const getImg = (path) => {
   if (!path) return null
@@ -186,25 +188,11 @@ function HorizontalCardSlider({ cards, renderCard, onActiveChange, autoIntervalM
           )
         })}
       </div>
-
-      {/* {total > 1 && (
-        <div className="flex justify-center gap-1.5 mt-1 pb-2">
-          {cards.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => goToReal(i)}
-              className={`transition-all duration-300 rounded-full ${
-                i === realIdx ? 'w-5 h-1.5 bg-gray-700' : 'w-1.5 h-1.5 bg-gray-400'
-              }`}
-            />
-          ))}
-        </div>
-      )} */}
     </div>
   )
 }
 
-// ================= BANNER CARD =================
+// ================= BANNER CARD (marketing banners - UNCHANGED) =================
 function BannerCard({ banner, isActive }) {
   return (
     <div 
@@ -267,59 +255,46 @@ function BannerCard({ banner, isActive }) {
   )
 }
 
-// ================= CATEGORY CARD =================
-function CategoryCard({ category, products, isActive, index }) {
-  const palette = getPalette(index)
-  const displayProducts = (products || []).slice(0, 4)
-  const emptySlots = 4 - displayProducts.length
-
+// ================= SUBCATEGORY CARD (website SubCategorySlider jaisa) =================
+// Banner/icon image + upar overlay gradient (admin ka overlay_color) + title + description + SHOP NOW
+function CategoryCard({ category, overlayColor, isActive }) {
   return (
     <Link
       to={`/category-products/?subcategory=${category.id}`}
-      className={`block rounded-xl overflow-hidden shadow-lg transition-all duration-300 h-[300px] ${
+      className={`group relative block h-[300px] overflow-hidden rounded-xl bg-gray-900 shadow-md transition-all duration-300 ${
         isActive ? 'scale-100 opacity-100' : 'scale-95 opacity-80'
       }`}
-      style={{ 
-        background: getBoldVerticalGradient(palette.color),
-        border: `2px solid ${palette.borderColor}`,
-        boxShadow: `0 4px 12px ${palette.color}30`
-      }}
     >
-      <div className="p-2 h-full flex flex-col">
-        <div className="mb-2 pb-1 border-b-2" style={{ borderBottomColor: `${palette.borderColor}50` }}>
-          <h3 className="text-sm font-bold text-gray-800 text-center">{category.title}</h3>
-          <p className="text-[10px] text-center mt-0.5" style={{ color: palette.color }}>
-            {products?.length || category.product_count || 0} items
-          </p>
-        </div>
+      {/* Banner image */}
+      <img
+        src={category.image}
+        alt={category.title}
+        loading="lazy"
+        className="absolute inset-0 h-full w-full object-cover"
+        onError={(e) => {
+          e.target.onerror = null
+          e.target.src = `https://picsum.photos/seed/sub${category.id}/600/1000`
+        }}
+      />
 
-        <div className="flex-1 min-h-0">
-          <div className="grid grid-cols-2 gap-1.5 aspect-square">
-            {displayProducts.map((prod, pi) => (
-              <div
-                key={prod.id || pi}
-                className="rounded-lg overflow-hidden bg-white/90 backdrop-blur-sm aspect-square flex items-center justify-center shadow-sm border"
-                style={{ borderColor: `${palette.borderColor}40` }}
-              >
-                <img
-                  src={getImg(prod.stocks?.[0]?.variant_image_url || prod.main_image) || `https://picsum.photos/seed/p${prod.id}/200/200`}
-                  alt={prod.name || 'Product'}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
-              </div>
-            ))}
-            {[...Array(emptySlots)].map((_, ei) => (
-              <div
-                key={`empty-${ei}`}
-                className="rounded-lg overflow-hidden bg-white/60 backdrop-blur-sm aspect-square flex items-center justify-center border border-dashed"
-                style={{ borderColor: `${palette.borderColor}60` }}
-              >
-                <FiShoppingBag className="w-5 h-5" style={{ color: palette.color }} />
-              </div>
-            ))}
-          </div>
-        </div>
+      {/* Overlay layer for text visibility */}
+      <div
+        className="absolute inset-x-0 top-0 h-[70%] pointer-events-none"
+        style={{ background: overlayGradient(overlayColor) }}
+      />
+
+      {/* Text */}
+      <div
+        className="absolute top-0 left-0 right-0 p-3"
+        style={{ color: textColorFor(overlayColor) }}
+      >
+        <h3 className="text-sm font-semibold line-clamp-1">{category.title}</h3>
+        {category.description && (
+          <p className="mt-1 text-xs opacity-90 line-clamp-2">{category.description}</p>
+        )}
+        <span className="mt-2 inline-block text-xs font-medium border-b border-current/70">
+          SHOP NOW →
+        </span>
       </div>
     </Link>
   )
@@ -332,17 +307,17 @@ export default function MobileShopSection({ onBgColorChange }) {
   const { addToast } = useToast()
 
   const [allCards, setAllCards] = useState([])
-  const [categories, setCategories] = useState([])
-  const [categoryProducts, setCategoryProducts] = useState({})
   const [activeCardIdx, setActiveCardIdx] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [overlayColor, setOverlayColor] = useState('#000000')
 
-  // Fetch Main Data
+  // Fetch Main Data (banners + subcategories — subcategories website jaise)
   useEffect(() => {
     const fetchAllData = async () => {
       try {
         setLoading(true)
         
+        // Marketing banners — jaise pehle the
         let banners = []
         try {
           const bannersRes = await publicAxios.get('/api/banners/mobile/banners/')
@@ -352,24 +327,24 @@ export default function MobileShopSection({ onBgColorChange }) {
           banners = []
         }
         
-        const catsRes = await publicAxios.get('/ecommerce/public/subcategories/')
-        const data = catsRes.data || []
-        const uniqueCats = Array.from(new Map(data.map(d => [d.id, {
-          id: d.id,
-          title: d.name,
-          product_count: d.product_count || 0,
-        }])).values()).slice(0, 10)
-        
-        setCategories(uniqueCats)
-
-        if (uniqueCats.length > 0) {
-          const ids = uniqueCats.map(s => s.id).join(',')
-          const pRes = await publicAxios.get(`/ecommerce/public/subcategory-products/?subcategory_ids=${ids}&products_per_subcat=4`)
-          if (pRes.data.success) {
-            setCategoryProducts(pRes.data.data)
-          }
+        // Subcategories — website SubCategorySlider ke same fetch + mapping
+        let uniqueCats = []
+        try {
+          const catsRes = await publicAxios.get('/ecommerce/public/subcategories/')
+          const mapped = (catsRes.data || []).map((subCat) => ({
+            id: subCat.id,
+            title: subCat.name,
+            description: subCat.description || '',
+            image: subCat.banner_url || subCat.icon_url,
+          }))
+          // Remove duplicates by id
+          uniqueCats = Array.from(new Map(mapped.map((i) => [i.id, i])).values())
+        } catch (err) {
+          console.error('Error fetching subcategories:', err)
+          uniqueCats = []
         }
         
+        // Banner / category interleave — jaise pehle tha
         const combined = []
         
         if (banners.length > 0) {
@@ -399,30 +374,40 @@ export default function MobileShopSection({ onBgColorChange }) {
     fetchAllData()
   }, [])
 
+  // Global overlay colour (alag effect — fail ho to bhi cards chalenge)
   useEffect(() => {
-    if (allCards[activeCardIdx]?.type === 'category') {
-      const catIndex = categories.findIndex(c => c.id === allCards[activeCardIdx]?.data?.id)
-      const palette = getPalette(catIndex)
-      onBgColorChange?.(`${palette.color}20`)
+    const fetchColor = async () => {
+      try {
+        const res = await publicAxios.get('api/ecommerce/public/subcategory-section/')
+        setOverlayColor(res.data?.overlay_color || '#000000')
+      } catch (err) {
+        console.error('Error fetching section colour:', err)
+      }
+    }
+    fetchColor()
+  }, [])
+
+  // Page background: subcategory card active ho to admin ke overlay colour ki halki jhalak
+  useEffect(() => {
+    const isCategory = allCards[activeCardIdx]?.type === 'category'
+    if (isCategory && /^#[0-9a-fA-F]{6}$/.test(overlayColor)) {
+      onBgColorChange?.(`${overlayColor}20`)
     } else {
       onBgColorChange?.('#f8f9fa')
     }
-  }, [activeCardIdx, allCards, categories, onBgColorChange])
+  }, [activeCardIdx, allCards, overlayColor, onBgColorChange])
 
   const renderCard = (card, idx, isActive) => {
     if (card.type === 'banner') {
       return <BannerCard banner={card.data} isActive={isActive} />
-    } else {
-      const catIndex = categories.findIndex(c => c.id === card.data?.id)
-      return (
-        <CategoryCard
-          category={card.data}
-          products={categoryProducts[card.data?.id]?.products}
-          isActive={isActive}
-          index={catIndex}
-        />
-      )
     }
+    return (
+      <CategoryCard
+        category={card.data}
+        overlayColor={overlayColor}
+        isActive={isActive}
+      />
+    )
   } 
 
   return (

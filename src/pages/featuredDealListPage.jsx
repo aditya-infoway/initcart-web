@@ -561,7 +561,7 @@ const FeaturedDealListPage = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-50 py-8 px-4">
-        <div className="max-w-7xl mx-auto">
+        <div className="mx-auto">
           <div className="animate-pulse">
             <div className="h-64 bg-white rounded-2xl shadow-xl mb-8"></div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -579,7 +579,7 @@ const FeaturedDealListPage = () => {
   if (!featuredDeal && products.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-50 py-8 px-4">
-        <div className="max-w-7xl mx-auto text-center py-16">
+        <div className="mx-auto text-center py-16">
           <div className="text-6xl mb-4"></div>
           <h2 className="text-3xl font-bold text-gray-800 mb-2">No Active Featured Deals</h2>
           <p className="text-gray-600 mb-6">Check back later for our featured collections!</p>
@@ -630,7 +630,7 @@ const FeaturedDealListPage = () => {
         title="Featured Filters"
       />
 
-      <div className="max-w-7xl mx-auto">
+      <div className=" mx-auto">
         {/* FANCY FEATURED DEAL HEADER WITH COUNTDOWN */}
         <div className="relative mb-12 overflow-hidden rounded-3xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 shadow-2xl">
           {/* Animated Background Elements */}

@@ -17,8 +17,8 @@ const FeatureBoxesStyled = () => {
   
   return (
     <div className="bg-blue-50 my-5 py-5">
-      <div className="container mx-auto px-4">
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-center">
+      <div className="w-full px-0">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-center w-full">
           {features.map((feature, index) => (
             <div
               key={index}

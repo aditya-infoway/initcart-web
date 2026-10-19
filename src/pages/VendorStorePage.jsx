@@ -384,7 +384,7 @@ useEffect(() => {
     if (loading) {
         return (
             <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6">
+                <div className=" mx-auto px-4 sm:px-6">
                     <div className="animate-pulse">
                         {/* Mobile Skeleton */}
                         <div className="lg:hidden">
@@ -432,7 +432,7 @@ useEffect(() => {
 
     return (
         <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6">
+            <div className="mx-auto px-4 sm:px-6">
                 {/* Mobile Store Header */}
                 <div className="lg:hidden mb-6">
                     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">

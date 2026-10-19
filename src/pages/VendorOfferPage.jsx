@@ -187,7 +187,7 @@ const getProductImage = (product) => {
     if (loading) {
         return (
             <div className="min-h-screen bg-gray-50 py-8">
-                <div className="max-w-7xl mx-auto px-4">
+                <div className="mx-auto px-4">
                     <div className="animate-pulse">
                         <div className="h-8 bg-gray-200 rounded w-1/3 mb-6"></div>
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -230,7 +230,7 @@ const getProductImage = (product) => {
 
     return (
         <div className="min-h-screen bg-gray-50 py-8">
-            <div className="max-w-7xl mx-auto px-4">
+            <div className="mx-auto px-4">
                 {/* Breadcrumb */}
                 <div className="flex items-center text-sm text-gray-600 mb-6">
                     <Link to="/offers" className="hover:text-blue-600 transition">Offers</Link>

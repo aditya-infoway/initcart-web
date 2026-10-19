@@ -16,7 +16,7 @@ import { format } from 'date-fns';
 import { FiShield } from 'react-icons/fi';
 import { FaInfo } from 'react-icons/fa';
 
-// ─── Font Tokens (Same as other mobile pages) ──────────────────────────────
+// ─── Font Tokens ─────────────────────────────────────────────────────────────
 const F = {
   pageTitle:    { fontSize: 16, fontWeight: 700 },
   pageSubtitle: { fontSize: 11, fontWeight: 400 },
@@ -120,7 +120,14 @@ const MobileCustomerProfile = () => {
   const [showOldPwd, setShowOldPwd] = useState(false);
   const [showNewPwd, setShowNewPwd] = useState(false);
   const [showConfirmPwd, setShowConfirmPwd] = useState(false);
-  const [previewImages, setPreviewImages] = useState({ passport_photo: null, id_proof: null });
+  
+  // Preview images state
+  const [previewImages, setPreviewImages] = useState({ 
+    passport_photo: null, 
+    id_proof: null, 
+    gst_certificate: null, 
+    business_license: null 
+  });
 
   const [agentForm, setAgentForm] = useState({
     agent_type: 'normal',
@@ -185,7 +192,7 @@ const MobileCustomerProfile = () => {
         toast.success(res.message || 'Application submitted!');
         setShowAgentModal(false);
         setAgentForm({ agent_type: 'normal', society_or_business_name: '', passport_photo: null, id_proof: null, gst_certificate: null, business_license: null });
-        setPreviewImages({ passport_photo: null, id_proof: null });
+        setPreviewImages({ passport_photo: null, id_proof: null, gst_certificate: null, business_license: null });
         fetchProfile();
       }
     } catch (e) {
@@ -252,7 +259,7 @@ const MobileCustomerProfile = () => {
 
       <div style={{ padding: '12px' }}>
 
-        {/* Profile Header Card - BLUE Gradient */}
+        {/* Profile Header Card */}
         <div style={{ background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDark})`, borderRadius: 20, padding: '20px', marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 60, height: 60, background: 'rgba(255,255,255,0.2)', borderRadius: 30, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -435,6 +442,10 @@ const MobileCustomerProfile = () => {
                 <InfoRow label="Email" value={agent.email} />
                 <InfoRow label="Location" value={`${agent.city}, ${agent.state}`} />
                 {agent.society_or_business_name && <InfoRow label="Business Name" value={agent.society_or_business_name} />}
+                
+                {/* NEW: Sponsor info added (Website parity) */}
+                {agent.sponsor && <InfoRow label="Sponsor" value={agent.sponsor.full_name || agent.sponsor.username} />}
+
                 <InfoRow label="Total Sales" value={`₹${(agent.total_sales || 0).toLocaleString()}`} valueColor={COLORS.primary} />
                 <InfoRow label="Status" value={agent.is_active_agent ? 'Active' : 'Inactive'} valueColor={agent.is_active_agent ? COLORS.success : COLORS.error} />
                 <InfoRow label="Joined" value={agent.created_at ? format(new Date(agent.created_at), 'dd MMM yyyy') : '—'} />
@@ -470,23 +481,23 @@ const MobileCustomerProfile = () => {
         )}
 
         {/* Action Buttons */}
-<div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
-  <button onClick={() => setShowPwdModal(true)} style={{ flex: 1, padding: '12px', background: '#F1F5F9', border: 'none', borderRadius: 14, ...F.cardTitle, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-    <Lock size={14} color={COLORS.textLight} /> Change Password
-  </button>
-  <button onClick={() => navigate('/aboutUs')} style={{ flex: 1, padding: '12px', background: '#F1F5F9', border: 'none', borderRadius: 14, ...F.cardTitle, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-    <FaInfo size={14} color={COLORS.primary} /> About Us
-  </button>
-</div>
+        <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+          <button onClick={() => setShowPwdModal(true)} style={{ flex: 1, padding: '12px', background: '#F1F5F9', border: 'none', borderRadius: 14, ...F.cardTitle, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <Lock size={14} color={COLORS.textLight} /> Change Password
+          </button>
+          <button onClick={() => navigate('/aboutUs')} style={{ flex: 1, padding: '12px', background: '#F1F5F9', border: 'none', borderRadius: 14, ...F.cardTitle, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <FaInfo size={14} color={COLORS.primary} /> About Us
+          </button>
+        </div>
 
-<div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
-  <button onClick={logout} style={{ flex: 1, padding: '12px', background: '#FEF2F2', border: 'none', borderRadius: 14, ...F.cardTitle, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-    <LogOut size={14} color={COLORS.error} /> Logout
-  </button>
-  <button onClick={() => navigate('/support')} style={{ flex: 1, padding: '12px', background: '#F1F5F9', border: 'none', borderRadius: 14, ...F.cardTitle, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-    <FiShield size={14} color={COLORS.textLight} /> Support
-  </button>
-</div>
+        <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+          <button onClick={logout} style={{ flex: 1, padding: '12px', background: '#FEF2F2', border: 'none', borderRadius: 14, ...F.cardTitle, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <LogOut size={14} color={COLORS.error} /> Logout
+          </button>
+          <button onClick={() => navigate('/support')} style={{ flex: 1, padding: '12px', background: '#F1F5F9', border: 'none', borderRadius: 14, ...F.cardTitle, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <FiShield size={14} color={COLORS.textLight} /> Support
+          </button>
+        </div>
       </div>
 
       {/* Agent Application Modal */}
@@ -512,26 +523,55 @@ const MobileCustomerProfile = () => {
                   <input type="text" value={agentForm.society_or_business_name} onChange={e => setAgentForm(p => ({ ...p, society_or_business_name: e.target.value }))} style={{ width: '100%', padding: '12px', border: `1px solid ${COLORS.border}`, borderRadius: 12, fontSize: 13 }} required />
                 </div>
               )}
+              
+              {/* Passport Photo - WITH PREVIEW */}
               <div style={{ marginBottom: 16 }}>
                 <label style={{ ...F.cardSub, fontWeight: 600, marginBottom: 6, display: 'block', color: COLORS.text }}>Passport Photo *</label>
-                <input type="file" accept="image/*" onChange={e => handleFileChange(e, 'passport_photo')} style={{ width: '100%' }} required />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <input type="file" accept="image/*" onChange={e => handleFileChange(e, 'passport_photo')} style={{ width: '100%' }} required />
+                  {previewImages.passport_photo && (
+                    <img src={previewImages.passport_photo} alt="preview" style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover', border: `1px solid ${COLORS.border}` }} />
+                  )}
+                </div>
               </div>
+              
+              {/* ID Proof - WITH PREVIEW */}
               <div style={{ marginBottom: 16 }}>
                 <label style={{ ...F.cardSub, fontWeight: 600, marginBottom: 6, display: 'block', color: COLORS.text }}>ID Proof (Aadhar/PAN) *</label>
-                <input type="file" accept="image/*,.pdf" onChange={e => handleFileChange(e, 'id_proof')} style={{ width: '100%' }} required />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <input type="file" accept="image/*,.pdf" onChange={e => handleFileChange(e, 'id_proof')} style={{ width: '100%' }} required />
+                  {previewImages.id_proof && (
+                    <img src={previewImages.id_proof} alt="preview" style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover', border: `1px solid ${COLORS.border}` }} />
+                  )}
+                </div>
               </div>
+
               {['pos', 'society'].includes(agentForm.agent_type) && (
                 <>
+                  {/* GST - FIXED BUG (added 'gst_certificate') + PREVIEW */}
                   <div style={{ marginBottom: 16 }}>
                     <label style={{ ...F.cardSub, fontWeight: 600, marginBottom: 6, display: 'block', color: COLORS.text }}>GST Certificate *</label>
-                    <input type="file" accept=".pdf,image/*" onChange={e => handleFileChange(e, 'gst_certificate')} style={{ width: '100%' }} required />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <input type="file" accept=".pdf,image/*" onChange={e => handleFileChange(e, 'gst_certificate')} style={{ width: '100%' }} required />
+                      {previewImages.gst_certificate && (
+                        <img src={previewImages.gst_certificate} alt="preview" style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover', border: `1px solid ${COLORS.border}` }} />
+                      )}
+                    </div>
                   </div>
+                  
+                  {/* Business License - FIXED BUG (added 'business_license') + PREVIEW */}
                   <div style={{ marginBottom: 16 }}>
                     <label style={{ ...F.cardSub, fontWeight: 600, marginBottom: 6, display: 'block', color: COLORS.text }}>Business License *</label>
-                    <input type="file" accept=".pdf,image/*" onChange={e => handleFileChange(e, 'business_license')} style={{ width: '100%' }} required />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <input type="file" accept=".pdf,image/*" onChange={e => handleFileChange(e, 'business_license')} style={{ width: '100%' }} required />
+                      {previewImages.business_license && (
+                        <img src={previewImages.business_license} alt="preview" style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover', border: `1px solid ${COLORS.border}` }} />
+                      )}
+                    </div>
                   </div>
                 </>
               )}
+              
               <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
                 <button type="button" onClick={() => setShowAgentModal(false)} style={{ flex: 1, padding: '12px', background: '#F1F5F9', border: 'none', borderRadius: 12, ...F.cardTitle, cursor: 'pointer' }}>Cancel</button>
                 <button type="submit" disabled={submitting} style={{ flex: 1, padding: '12px', background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryDark})`, color: COLORS.white, border: 'none', borderRadius: 12, ...F.cardTitle, cursor: 'pointer', opacity: submitting ? 0.6 : 1 }}>

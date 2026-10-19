@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { axiosInstance } from "../api/axios";
+import { orderGet } from "../api/orderApi";  
 import MobileOrderConfirmationPage from "./mobile/MobileOrderConfirmation";
 import {
   FiCheckCircle,
@@ -64,48 +65,32 @@ const OrderConfirmationPage = () => {
     }));
   }, []);
 
-  const fetchOrderDetails = async () => {
-    try {
-      // Try multiple endpoints for compatibility
-      let response;
+ // axiosInstance import is page me aur use nahi hota
 
-      try {
-        response = await axiosInstance.get(`/api/public/orders/detail/?order_number=${orderNumber}`);
-      } catch (err) {
-        response = await axiosInstance.get(`/api/public/orders/?search=${orderNumber}`);
-      }
+const fetchOrderDetails = async () => {
+  try {
+    const response = await orderGet('/api/public/orders/detail/', { order_number: orderNumber });
 
-      if (response.data && response.data.success) {
-        const orderData = response.data.data;
-        setOrder(orderData);
-
-        // Extract order items if available
-        if (orderData.items && Array.isArray(orderData.items)) {
-          setOrderItems(orderData.items);
-        } else if (response.data.items) {
-          setOrderItems(response.data.items);
-        }
-      } else {
-        setError(response.data?.message || 'Order not found');
-      }
-    } catch (err) {
-      console.error('Error fetching order:', err);
-
-      // Try alternative API endpoint
-      try {
-        const altResponse = await axiosInstance.get(`/api/public/orders/?order_number=${orderNumber}`);
-        if (altResponse.data && altResponse.data.success) {
-          setOrder(altResponse.data.data);
-        } else {
-          setError('Failed to fetch order details');
-        }
-      } catch (altErr) {
-        setError('Order not found. Please check your order number.');
-      }
-    } finally {
-      setLoading(false);
+    if (response.data?.success) {
+      const orderData = response.data.data;
+      setOrder(orderData);
+      setOrderItems(Array.isArray(orderData.items) ? orderData.items : []);
+    } else {
+      setError(response.data?.message || 'Order not found');
     }
-  };
+  } catch (err) {
+    console.error('Error fetching order:', err);
+    if (err.response?.status === 401) {
+      setError('Session expired. Please login again.');
+    } else if (err.response?.status === 404) {
+      setError('Order not found. Please check your order number.');
+    } else {
+      setError('Failed to fetch order details');
+    }
+  } finally {
+    setLoading(false);
+  }
+};
 
   // If no order number in URL, try to get from localStorage
   useEffect(() => {
@@ -146,12 +131,11 @@ const OrderConfirmationPage = () => {
     }
   };
   const getOrderItemImage = (item) => {
-    // 1️⃣ Variant image first
+
     if (item.variant_image) {
       return getImageUrl(item.variant_image);
     }
 
-    // 2️⃣ Main image fallback
     if (item.product_details?.main_image) {
       return getImageUrl(item.product_details.main_image);
     }

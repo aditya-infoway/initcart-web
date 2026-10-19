@@ -5,9 +5,6 @@ import { publicAxios } from '../api/axios'
 import { FiChevronRight } from 'react-icons/fi'
 
 // ================= INFINITE HORIZONTAL CARD SLIDER =================
-// Clone trick: [lastClone, ...realCards, firstClone]
-// Jab clone pe pahunche → silently real card pe jump (no animation)
-// Result: har direction me infinite smooth scroll, koi jump nahi
 function HorizontalCardSlider({ cards, renderCard, onActiveChange, autoIntervalMs = 5000 }) {
   const total = cards.length
   const [realIdx, setRealIdx] = useState(0)
@@ -151,19 +148,30 @@ function HorizontalCardSlider({ cards, renderCard, onActiveChange, autoIntervalM
 
 // ================= VENDOR CARD =================
 function VendorCard({ vendor, isActive, index }) {
+  // Location logic
+  const locationDisplay = 
+    vendor.city && vendor.state 
+      ? `${vendor.city}, ${vendor.state}` 
+      : vendor.city || vendor.state || 'Online Store'
+
   return (
     <Link to={`/vendor/${vendor.id}`} className="block">
       <div className="bg-white rounded-xl overflow-hidden shadow-md p-3">
         <div className="flex items-center gap-3">
           <img
-            src={vendor.logo}
-            className="w-12 h-12 rounded-full object-cover"
-            onError={(e) => e.target.src = `https://picsum.photos/seed/logo${vendor.id}/100/100`}
+            src={vendor.logo} // Fallback removed
+            className="w-12 h-12 rounded-full object-cover flex-shrink-0"
             alt={vendor.name}
           />
-          <div>
-            <h3 className="font-semibold text-gray-800">{vendor.name}</h3>
-            <p className="text-xs text-gray-500">{vendor.stats?.products} products</p>
+          <div className="min-w-0">
+            <h3 className="font-semibold text-gray-800 truncate">{vendor.name}</h3>
+            <p className="text-xs text-gray-500 truncate mt-0.5 flex items-center gap-1">
+              <svg className="w-3 h-3 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              {locationDisplay}
+            </p>
           </div>
         </div>
       </div>
@@ -181,12 +189,18 @@ export default function MobileTopSellers() {
     const fetchTopSellers = async () => {
       try {
         setTopSellersLoading(true)
-        const response = await publicAxios.get('/ecommerce/public/vendors/')
+        const response = await publicAxios.get('/api/ecommerce/public/top-sellers/')
+        
+        const list = Array.isArray(response.data)
+          ? response.data
+          : response.data?.results || []
 
-        const mappedVendors = response.data
-          .filter(vendor => vendor.is_approved === true)
-          .slice(0, 12)
-          .map((vendor, idx) => ({
+        const mappedVendors = list.map((vendor) => {
+          // Fallback logic removed
+          const logoUrl = vendor.store_logo_url || null
+          const bannerUrl = vendor.banner_url || null
+
+          return {
             id: vendor.id,
             name: vendor.business_name,
             owner: vendor.owner_name || 'Vendor',
@@ -196,28 +210,22 @@ export default function MobileTopSellers() {
               reviews: Math.floor(Math.random() * 200) + 10,
               products: vendor.product_count || Math.floor(Math.random() * 200) + 1,
             },
-            banner: vendor.store_logo_url || `https://picsum.photos/seed/vendor${vendor.id}/300/150`,
-            logo: vendor.store_logo_url || `https://picsum.photos/seed/logo${vendor.id}/100/100`,
+            banner: bannerUrl,
+            logo: logoUrl,
             vendor_type: vendor.vendor_type || 'product',
             is_approved: vendor.is_approved || false,
-          }))
+          }
+        })
 
         const uniqueVendors = Array.from(
           new Map(mappedVendors.map(item => [item.id, item])).values()
         )
 
-        setTopSellers(uniqueVendors)
+        setTopSellers(uniqueVendors.slice(0, 12))
       } catch (err) {
         console.error('Error fetching top sellers:', err)
-        const fallbackData = Array.from({ length: 8 }).map((_, i) => ({
-          id: i + 1,
-          name: ['Kids Corner', 'ElectroHub', 'Fashion Store', 'Home Decor',
-                 'Sports Zone', 'Book World', 'Grocery Mart', 'Tech Store'][i],
-          stats: { reviews: Math.floor(Math.random() * 200), products: Math.floor(Math.random() * 200) + 1 },
-          banner: `https://picsum.photos/seed/vendor${i}/300/150`,
-          logo: `https://picsum.photos/seed/logo${i}/100/100`,
-        }))
-        setTopSellers(fallbackData)
+        // Fallback fake data removed completely
+        setTopSellers([])
       } finally {
         setTopSellersLoading(false)
       }
