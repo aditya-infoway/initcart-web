@@ -1,7 +1,7 @@
 // src/api/axios.js
 import axios from "axios";
 
-const API_BASE_URL = "http://localhost:8000/";
+const API_BASE_URL = "https://api.initcart.com/";
 
 export const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
@@ -45,6 +45,12 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+
+       
+    if (!error.response && (error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED' || error.message === 'Network Error')) {
+      window.dispatchEvent(new Event('apiNetworkError'));
+      return Promise.reject(error);
+    }
 
     const isJWTRequest =
       originalRequest.headers?.Authorization?.startsWith("Bearer");
@@ -99,4 +105,24 @@ function logoutUser() {
   window.location.href = "/customer/login";
 }
 
+// =============================
+// PUBLIC AXIOS RESPONSE INTERCEPTOR
+// =============================
+publicAxios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (
+      !error.response &&
+      (error.code === 'ERR_NETWORK' ||
+        error.code === 'ECONNABORTED' ||
+        error.message === 'Network Error')
+    ) {
+      window.dispatchEvent(new Event('apiNetworkError'));
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default axiosInstance;
+
+

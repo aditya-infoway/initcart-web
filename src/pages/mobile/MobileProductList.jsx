@@ -35,7 +35,7 @@ const PLACEHOLDER_IMG = "https://placehold.co/600x600/f0f4f8/94a3b8?text=No+Imag
 const toAbsoluteUrl = (path) => {
   if (!path) return null;
   if (path.startsWith("http")) return path;
-  return `http://localhost:8000${path.startsWith("/") ? "" : "/"}${path}`;
+  return `https://api.initcart.com${path.startsWith("/") ? "" : "/"}${path}`;
 };
 
 // main image -> variant image -> thumbnail -> placeholder

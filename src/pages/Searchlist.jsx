@@ -330,7 +330,7 @@ const ProductCard = ({ product, openModal, onAddToCart, showLoginModal, hasCoupo
             if (image.startsWith('http')) {
                 return image;
             } else {
-                return `http://localhost:8000/${image.startsWith('/') ? '' : '/'}${image}`;
+                return `https://api.initcart.com/${image.startsWith('/') ? '' : '/'}${image}`;
             }
         }; */
 
@@ -351,7 +351,7 @@ const ProductCard = ({ product, openModal, onAddToCart, showLoginModal, hasCoupo
 
         const cleanPath = image.replace(/^\/+/, "");
 
-        return `http://localhost:8000//${cleanPath}`;
+        return `https://api.initcart.com//${cleanPath}`;
     };
 
     const handleViewDetails = (e) => {
@@ -773,7 +773,7 @@ const QuickViewModal = ({ modalProduct, onClose, isModalOpen, onAddToCart }) => 
         if (image.startsWith('http')) {
             return image;
         } else {
-            return `http://localhost:8000/${image.startsWith('/') ? '' : '/'}${image}`;
+            return `https://api.initcart.com/${image.startsWith('/') ? '' : '/'}${image}`;
         }
     };
 
@@ -1399,9 +1399,9 @@ export default function Searchlist() {
                     if (imgPath.startsWith('http')) return imgPath;
                     const cleanPath = imgPath.replace(/^\/+/, '');
                     if (cleanPath.startsWith('media/')) {
-                        return `http://localhost:8000//${cleanPath}`;
+                        return `https://api.initcart.com//${cleanPath}`;
                     }
-                    return `http://localhost:8000//media/${cleanPath}`;
+                    return `https://api.initcart.com//media/${cleanPath}`;
                 };
 
                 // Ensure vendor_details exists

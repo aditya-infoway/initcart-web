@@ -186,21 +186,27 @@ const OrdersPage = () => {
 
     const getOrderItemImage = (item) => {
         if (item.product_details?.variant_image) {
-            return `http://localhost:8000/${item.product_details.variant_image}`;
+            return `https://api.initcart.com/${item.product_details.variant_image}`;
         }
         if (item.product_details?.main_image) {
-            return `http://localhost:8000/${item.product_details.main_image}`;
+            return `https://api.initcart.com/${item.product_details.main_image}`;
         }
         return "https://placehold.co/300x300?text=No+Image";
     };
 
-    const isReturnEligible = (order, item) => {
-        if (item.item_status !== 'delivered' || !item.delivered_at) return false;
-        const daysSince = (Date.now() - new Date(item.delivered_at).getTime()) / 86400000;
-        if (daysSince > 7) return false;
-        if (returnMap[item.id]) return false;
-        return true;
-    };
+const isReturnEligible = (order, item) => {
+    if (item.item_status !== 'delivered' || !item.delivered_at) return false;
+
+    const returnDays = Number(item.return_days ?? 7);
+    if (returnDays <= 0) return false;                     // no-return product
+
+    const daysSince = (Date.now() - new Date(item.delivered_at).getTime()) / 86400000;
+    if (daysSince > returnDays) return false;
+
+    if (Number(item.returned_quantity || 0) >= Number(item.quantity || 0)) return false;
+    if (returnMap[item.id]) return false;
+    return true;
+};
 
     const handleReturnClick = (order, item) => {
         setActiveReturnItem({ order, item });
@@ -683,7 +689,7 @@ const OrdersPage = () => {
                                                                             {isReturnEligible(order, item) && (
                                                                                 <button
                                                                                     onClick={() => handleReturnClick(order, item)}
-                                                                                    title="Return this item (within 7 days of delivery)"
+                                                                                   title={`Return this item (within ${item.return_days ?? 7} days of delivery)`}
                                                                                     aria-label="Return this item"
                                                                                     className="inline-flex items-center justify-center w-8 h-8 border border-red-300 bg-white text-red-600 hover:bg-red-50 rounded-lg transition"
                                                                                 >

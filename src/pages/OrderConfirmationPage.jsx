@@ -152,7 +152,7 @@ const fetchOrderDetails = async () => {
       return imagePath;
     }
 
-    return `http://localhost:8000/${imagePath}`;
+    return `https://api.initcart.com/${imagePath}`;
   };
 
   const downloadInvoice = () => {

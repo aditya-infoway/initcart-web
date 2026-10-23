@@ -7,7 +7,7 @@ const getImageUrl = (image) => {
   if (!image) return "https://placehold.co/400x400/f0f4f8/94a3b8?text=Brand";
   if (image.startsWith("http")) return image;
   const cleanPath = image.replace(/^\/+/, "");
-  return `http://localhost:8000//media/${cleanPath}`;
+  return `https://api.initcart.com//media/${cleanPath}`;
 };
 
 const CLONE_COUNT = 4;

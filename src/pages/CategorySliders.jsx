@@ -18,7 +18,7 @@ const formatPrice = (price) => {
 const toAbsoluteUrl = (path) => {
   if (!path) return null;
   if (path.startsWith("http")) return path;
-  return `http://localhost:8000${path.startsWith("/") ? "" : "/"}${path}`;
+  return `https://api.initcart.com${path.startsWith("/") ? "" : "/"}${path}`;
 };
 
 // main image -> variant image -> thumbnail -> placeholder

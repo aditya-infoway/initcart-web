@@ -452,7 +452,7 @@ const CartPage = () => {
       return imagePath;
     }
     
-    return `http://localhost:8000/${imagePath}`;
+    return `https://api.initcart.com/${imagePath}`;
   };
 
   // Get coupon badge color based on type

@@ -2,7 +2,7 @@
 // Order pages ke liye isolated GET helper. Shared axiosInstance/interceptors ko touch nahi karta.
 import axios from "axios";
 
-const BASE = "http://localhost:8000";
+const BASE = "https://api.initcart.com";
 const plain = axios.create({ baseURL: BASE, timeout: 30000 }); // no interceptors
 
 const buildAuthList = () => {

@@ -60,7 +60,7 @@ const getItemImage = (item) => {
 
     if (imagePath.startsWith("http")) return imagePath;
 
-    return `http://localhost:8000/${imagePath}`;
+    return `https://api.initcart.com/${imagePath}`;
 };
 
 const OrderDetailsPage = () => {
@@ -735,7 +735,7 @@ const OrderDetailsPage = () => {
                                                         <div className="flex items-center gap-3">
                                                             {(item.product_details?.variant_image || item.product_details?.main_image) ? (
                                                                 <img
-                                                                    src={`http://localhost:8000/${item.product_details?.variant_image ||
+                                                                    src={`https://api.initcart.com/${item.product_details?.variant_image ||
                                                                         item.product_details?.main_image
                                                                         }`}
                                                                     alt={item.product_name}

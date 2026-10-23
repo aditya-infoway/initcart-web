@@ -110,7 +110,7 @@ const QRPublicPage = () => {
   useEffect(() => {
     const fetchCard = async () => {
       try {
-        const res = await axios.get(`http://localhost:8000/api/ecommerce/public/qrcards/${slug}/`); 
+        const res = await axios.get(`https://api.initcart.com/api/ecommerce/public/qrcards/${slug}/`); 
         setCard(res.data); 
       } catch (err) { 
         setError(true); 

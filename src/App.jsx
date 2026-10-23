@@ -85,6 +85,8 @@ import HotelHome from './Services/Hotelhomes.jsx';
 import HotelDetail from './Services/Hoteldetail.jsx';
 import HotelHome2 from './Services/Hotelhomes.jsx';
 import QRPublicPage from './pages/QRPublicPage.jsx';
+import { NetworkProvider } from './context/NetworkContext';
+import NetworkErrorScreen from './components/NetworkErrorScreen.jsx';
 
 
 function App() {
@@ -128,6 +130,8 @@ function App() {
 
     <AuthProvider>
       <ToastProvider>
+      <NetworkProvider>          {/* 👈 ADD */}
+      <NetworkErrorScreen />
         <Routes>
           {/* E-commerce pages */}
           <Route element={<EcomLayout />}>
@@ -226,7 +230,7 @@ function App() {
             <Route path="/hoteldetail/:id" element={<HotelDetail />} />
           </Route>
         </Routes>
-
+        </NetworkProvider>  
       </ToastProvider>
     </AuthProvider>
       </>

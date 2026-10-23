@@ -11,7 +11,7 @@ const getFullImageUrl = (imagePath) => {
   if (imagePath.startsWith("https")) return imagePath;
   // Remove any duplicate /media/
   const cleanPath = imagePath.replace(/^\/+/, '').replace(/^media\//, '');
-  return `http://localhost:8000//media/${cleanPath}`;
+  return `https://api.initcart.com//media/${cleanPath}`;
 };
 
 const getProductImage = (product) => {

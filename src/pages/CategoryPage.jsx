@@ -263,7 +263,7 @@ const AmazonStyleCategories = () => {
   const resolveImg = (product) => {
     const raw = imgUrl(product);
     if (!raw) return null;
-    return raw.startsWith('http') ? raw : `http://localhost:8000/${raw}`;
+    return raw.startsWith('http') ? raw : `https://api.initcart.com/${raw}`;
   };
 
   /* Current section name */

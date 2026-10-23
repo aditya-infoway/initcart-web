@@ -398,7 +398,7 @@ const MobileOrderConfirmationPage = () => {
   const getImageUrl = (imagePath) => {
     if (!imagePath) return "https://placehold.co/80x80/f0f4f8/94a3b8?text=No+Image";
     if (imagePath.startsWith('http')) return imagePath;
-    return `http://localhost:8000/${imagePath}`;
+    return `https://api.initcart.com/${imagePath}`;
   };
 
   const getOrderItemImage = (item) => {

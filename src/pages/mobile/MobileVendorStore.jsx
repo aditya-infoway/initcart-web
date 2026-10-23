@@ -94,7 +94,7 @@ const MobileProductCard = ({ product }) => {
         return "https://placehold.co/300x300/f1f5f9/94a3b8?text=No+Image";
     };
 
-    const ensureAbsolute = (p) => (p?.startsWith("http") ? p : `http://localhost:8000/${p?.startsWith("/") ? "" : "/"}${p}`);
+    const ensureAbsolute = (p) => (p?.startsWith("http") ? p : `https://api.initcart.com/${p?.startsWith("/") ? "" : "/"}${p}`);
 
     const currentPrice = product.is_in_campaign && product.campaign_price
         ? product.campaign_price
@@ -162,7 +162,7 @@ const MobileProductListCard = ({ product }) => {
         .catch(() => {});
     }, [product.id]);
 
-    const ensureAbsolute = (p) => (p?.startsWith("http") ? p : `http://localhost:8000/${p?.startsWith("/") ? "" : "/"}${p}`);
+    const ensureAbsolute = (p) => (p?.startsWith("http") ? p : `https://api.initcart.com/${p?.startsWith("/") ? "" : "/"}${p}`);
 
     const getImage = () => {
         if (imgErr) return "https://placehold.co/150x150/f1f5f9/94a3b8?text=No+Image";

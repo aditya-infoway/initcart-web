@@ -65,7 +65,7 @@ const ProductCard = ({ product }) => {
     const getFullImageUrl = (imagePath) => {
         if (!imagePath) return "https://placehold.co/300x300/f0f4f8/94a3b8?text=No+Image";
         if (imagePath.startsWith('http')) return imagePath;
-        return `http://localhost:8000/${imagePath.startsWith('/') ? '' : '/'}${imagePath}`;
+        return `https://api.initcart.com/${imagePath.startsWith('/') ? '' : '/'}${imagePath}`;
     };
 
     // Get best product image (variant > main > gallery)

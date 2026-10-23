@@ -301,9 +301,9 @@ const ProductCard = ({ product }) => {
         if (!image) return "https://placehold.co/300x300/f0f4f8/94a3b8?text=No+Image";
         if (image.startsWith('http')) return image;
         if (image.startsWith('/media/')) {
-            return `http://localhost:8000/${image}`;
+            return `https://api.initcart.com/${image}`;
         }
-        return `http://localhost:8000//media/${image}`;
+        return `https://api.initcart.com//media/${image}`;
     };
 
     const getProductPrice = () => {
