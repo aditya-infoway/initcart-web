@@ -166,7 +166,7 @@ const MobileOrderDetailsPage = () => {
     const imagePath = item.product_details?.variant_image || item.product_details?.main_image;
     if (!imagePath) return null;
     if (imagePath.startsWith("http")) return imagePath;
-    return `http://localhost:8000/${imagePath}`;
+    return `https://api.initcart.com/${imagePath}`;
   };
 
   // NEW HELPER: Extract return info for an item

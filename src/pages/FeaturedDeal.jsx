@@ -8,7 +8,7 @@ import { useToast } from "../context/ToastContext";
 const getFullImageUrl = (imagePath) => {
   if (!imagePath) return null;
   if (imagePath.startsWith("http")) return imagePath;
-  return `http://localhost:8000/${imagePath.startsWith("/") ? "" : "/"}${imagePath}`;
+  return `https://api.initcart.com/${imagePath.startsWith("/") ? "" : "/"}${imagePath}`;
 };
 
 const getProductImage = (product) => {

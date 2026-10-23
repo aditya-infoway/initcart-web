@@ -57,7 +57,7 @@ const allServices = [
   { id: 11, title: "Work Place", keyword: "coworking,office", path: "/workplacehome", img: workplaceIcon },
 ];
 
-const API_BASE_URL = 'http://localhost:8000/';
+const API_BASE_URL = 'https://api.initcart.com/';
 
 const getImageUrl = (imagePath) => {
   if (!imagePath) return null;
@@ -234,7 +234,7 @@ export default function Header() {
   const getCartImageUrl = (imagePath) => {
     if (!imagePath) return "https://placehold.co/100x100/f0f4f8/94a3b8?text=No+Image";
     if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) return imagePath;
-    return `http://localhost:8000/${imagePath}`;
+    return `https://api.initcart.com/${imagePath}`;
   };
 
   // ── Cart hover panel ─────────────────────────────────────────────────────

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { publicAxios } from "../../api/axios";
 
-const BASE = "http://localhost:8000/";
+const BASE = "https://api.initcart.com/";
 const imgUrl = (p) => {
   const path = p?.main_image_url || p?.main_image || p?.thumbnail_image_url || p?.thumbnail_image;
   if (!path) return "https://placehold.co/300x300/f0f4f8/94a3b8?text=Product";

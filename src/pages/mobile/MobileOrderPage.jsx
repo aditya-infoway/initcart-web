@@ -148,8 +148,8 @@ const MobileOrdersPage = () => {
   }, [authLoading, fetchOrders, fetchReturnRequests]);
 
   const getOrderItemImage = (item) => {
-    if (item.product_details?.variant_image) return `http://localhost:8000/${item.product_details.variant_image}`;
-    if (item.product_details?.main_image) return `http://localhost:8000/${item.product_details.main_image}`;
+    if (item.product_details?.variant_image) return `https://api.initcart.com/${item.product_details.variant_image}`;
+    if (item.product_details?.main_image) return `https://api.initcart.com/${item.product_details.main_image}`;
     return "https://placehold.co/80x80/f0f4f8/94a3b8?text=No+Image";
   };
 
@@ -165,8 +165,14 @@ const MobileOrdersPage = () => {
 
   const isReturnEligible = (order, item) => {
     if (item.item_status !== 'delivered' || !item.delivered_at) return false;
+
+    const returnDays = Number(item.return_days ?? 7);
+    if (returnDays <= 0) return false;                     // No Return / Exchange Only
+
     const daysSince = (Date.now() - new Date(item.delivered_at).getTime()) / 86400000;
-    if (daysSince > 7) return false;
+    if (daysSince > returnDays) return false;
+
+    if (Number(item.returned_quantity || 0) >= Number(item.quantity || 0)) return false;
     if (returnMap[item.id]) return false;
     return true;
   };
@@ -306,7 +312,7 @@ const MobileOrdersPage = () => {
                       onClick={() => handleReturnClick(order, item)}
                       style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '5px 12px', border: '1px solid #FCA5A5', background: '#FFFFFF', color: '#DC2626', borderRadius: 6, cursor: 'pointer', ...F.badge }}
                     >
-                      <FaUndoAlt size={10} /> Return
+                     <FaUndoAlt size={10} /> Return ({item.return_days ?? 7}d)
                     </button>
                   )}
                   {returnReq?.status === 'vendor_rejected' && (

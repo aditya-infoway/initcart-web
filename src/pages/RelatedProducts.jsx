@@ -5,7 +5,7 @@ import { publicAxios } from "../api/axios";
 const AUTO_DELAY = 3000;      // har 3 sec me auto slide
 const RESUME_AFTER = 4000;    // interaction ke 4 sec baad auto slide wapas chalu
 const MAX_ITEMS = 12;
-const BASE = "http://localhost:8000/";
+const BASE = "https://api.initcart.com/";
 
 const imgUrl = (p) => {
   const path =
